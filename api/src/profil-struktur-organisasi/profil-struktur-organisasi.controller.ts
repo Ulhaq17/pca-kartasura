@@ -8,10 +8,12 @@ import {
   ParseIntPipe,
   Patch,
   Post,
+  Query,
   UploadedFile,
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { PaginationQueryDto } from '../shared/dto/pagination-query.dto';
 import { StorageService } from '../storage/storage.service';
 import { CreateProfilStrukturOrganisasiDto } from './dto/create-profil-struktur-organisasi.dto';
 import { UpdateProfilStrukturOrganisasiDto } from './dto/update-profil-struktur-organisasi.dto';
@@ -39,8 +41,8 @@ export class ProfilStrukturOrganisasiController {
   }
 
   @Get()
-  findAll() {
-    return this.profilStrukturOrganisasiService.findAll();
+  findAll(@Query() query: PaginationQueryDto) {
+    return this.profilStrukturOrganisasiService.findAll(query);
   }
 
   @Get(':id')

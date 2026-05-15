@@ -1,6 +1,11 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { AuditService } from '../audit/audit.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { PaginationQueryDto } from '../shared/dto/pagination-query.dto';
+import {
+  createPaginatedResult,
+  getPaginationParams,
+} from '../shared/pagination/paginated-result';
 import { CreateProfilVisiMisiDto } from './dto/create-profil-visi-misi.dto';
 import { UpdateProfilVisiMisiDto } from './dto/update-profil-visi-misi.dto';
 
@@ -22,11 +27,20 @@ export class ProfilVisiMisiService {
     return data;
   }
 
-  async findAll() {
-    return this.prisma.profilVisiMisi.findMany({
-      where: { deletedAt: null },
-      orderBy: { updatedAt: 'desc' },
-    });
+  async findAll(query: PaginationQueryDto) {
+    const { skip, take } = getPaginationParams(query);
+    const where = { deletedAt: null };
+    const [items, totalItems] = await this.prisma.$transaction([
+      this.prisma.profilVisiMisi.findMany({
+        where,
+        skip,
+        take,
+        orderBy: { updatedAt: 'desc' },
+      }),
+      this.prisma.profilVisiMisi.count({ where }),
+    ]);
+
+    return createPaginatedResult(items, totalItems, query);
   }
 
   async findOne(id: number) {

@@ -7,10 +7,12 @@ import {
   ParseIntPipe,
   Patch,
   Post,
+  Query,
   UploadedFiles,
   UseInterceptors,
 } from '@nestjs/common';
 import { FileFieldsInterceptor } from '@nestjs/platform-express';
+import { PaginationQueryDto } from '../shared/dto/pagination-query.dto';
 import { StorageService } from '../storage/storage.service';
 import { CreateMajelisLembagaDto } from './dto/create-majelis-lembaga.dto';
 import { UpdateMajelisLembagaDto } from './dto/update-majelis-lembaga.dto';
@@ -53,8 +55,8 @@ export class MajelisLembagaController {
   }
 
   @Get()
-  findAll() {
-    return this.majelisLembagaService.findAll();
+  findAll(@Query() query: PaginationQueryDto) {
+    return this.majelisLembagaService.findAll(query);
   }
 
   @Get('slug/:slug')

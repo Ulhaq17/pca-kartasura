@@ -1,6 +1,11 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
+import { PaginationQueryDto } from '../shared/dto/pagination-query.dto';
+import {
+  createPaginatedResult,
+  getPaginationParams,
+} from '../shared/pagination/paginated-result';
 import { CreateProfilSejarahDto } from './dto/create-profil-sejarah.dto';
 import { UpdateProfilSejarahDto } from './dto/update-profil-sejarah.dto';
 
@@ -22,11 +27,20 @@ export class ProfilSejarahService {
     return data;
   }
 
-  async findAll() {
-    return this.prisma.profilSejarah.findMany({
-      where: { deletedAt: null },
-      orderBy: { updatedAt: 'desc' },
-    });
+  async findAll(query: PaginationQueryDto) {
+    const { skip, take } = getPaginationParams(query);
+    const where = { deletedAt: null };
+    const [items, totalItems] = await this.prisma.$transaction([
+      this.prisma.profilSejarah.findMany({
+        where,
+        skip,
+        take,
+        orderBy: { updatedAt: 'desc' },
+      }),
+      this.prisma.profilSejarah.count({ where }),
+    ]);
+
+    return createPaginatedResult(items, totalItems, query);
   }
 
   async findOne(id: number) {

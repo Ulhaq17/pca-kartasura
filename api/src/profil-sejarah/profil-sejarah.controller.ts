@@ -9,10 +9,12 @@ import {
   UseInterceptors,
   UploadedFile,
   ParseIntPipe,
+  Query,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ProfilSejarahService } from './profil-sejarah.service';
 import { StorageService } from '../storage/storage.service';
+import { PaginationQueryDto } from '../shared/dto/pagination-query.dto';
 import { CreateProfilSejarahDto } from './dto/create-profil-sejarah.dto';
 import { UpdateProfilSejarahDto } from './dto/update-profil-sejarah.dto';
 
@@ -36,8 +38,8 @@ export class ProfilSejarahController {
   }
 
   @Get()
-  findAll() {
-    return this.profilSejarahService.findAll();
+  findAll(@Query() query: PaginationQueryDto) {
+    return this.profilSejarahService.findAll(query);
   }
 
   @Get(':id')

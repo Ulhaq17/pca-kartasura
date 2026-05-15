@@ -7,7 +7,9 @@ import {
   ParseIntPipe,
   Patch,
   Post,
+  Query,
 } from '@nestjs/common';
+import { PaginationQueryDto } from '../shared/dto/pagination-query.dto';
 import { CreateProfilVisiMisiDto } from './dto/create-profil-visi-misi.dto';
 import { UpdateProfilVisiMisiDto } from './dto/update-profil-visi-misi.dto';
 import { ProfilVisiMisiService } from './profil-visi-misi.service';
@@ -22,8 +24,8 @@ export class ProfilVisiMisiController {
   }
 
   @Get()
-  findAll() {
-    return this.profilVisiMisiService.findAll();
+  findAll(@Query() query: PaginationQueryDto) {
+    return this.profilVisiMisiService.findAll(query);
   }
 
   @Get(':id')

@@ -1,6 +1,11 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { AuditService } from '../audit/audit.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { PaginationQueryDto } from '../shared/dto/pagination-query.dto';
+import {
+  createPaginatedResult,
+  getPaginationParams,
+} from '../shared/pagination/paginated-result';
 import { slugify } from '../shared/utils/slugify.util';
 import { CreateMajelisLembagaDto } from './dto/create-majelis-lembaga.dto';
 import { UpdateMajelisLembagaDto } from './dto/update-majelis-lembaga.dto';
@@ -24,11 +29,20 @@ export class MajelisLembagaService {
     return data;
   }
 
-  async findAll() {
-    return this.prisma.majelisLembaga.findMany({
-      where: { deletedAt: null },
-      orderBy: { updatedAt: 'desc' },
-    });
+  async findAll(query: PaginationQueryDto) {
+    const { skip, take } = getPaginationParams(query);
+    const where = { deletedAt: null };
+    const [items, totalItems] = await this.prisma.$transaction([
+      this.prisma.majelisLembaga.findMany({
+        where,
+        skip,
+        take,
+        orderBy: { updatedAt: 'desc' },
+      }),
+      this.prisma.majelisLembaga.count({ where }),
+    ]);
+
+    return createPaginatedResult(items, totalItems, query);
   }
 
   async findOne(id: number) {

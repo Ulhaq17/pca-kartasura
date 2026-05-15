@@ -23,6 +23,17 @@ describe('App (e2e)', () => {
     deleteFile: jest.fn().mockResolvedValue(undefined),
   };
 
+  const expectPaginationMeta = (body: any) => {
+    expect(body.meta.pagination).toEqual({
+      page: 1,
+      limit: 10,
+      totalItems: expect.any(Number),
+      totalPages: expect.any(Number),
+      hasNextPage: expect.any(Boolean),
+      hasPreviousPage: expect.any(Boolean),
+    });
+  };
+
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
@@ -120,10 +131,12 @@ describe('App (e2e)', () => {
     it('GET /api/v1/majelis-lembaga (Find All)', async () => {
       const response = await request(app.getHttpServer())
         .get('/api/v1/majelis-lembaga')
+        .query({ page: 1, limit: 10 })
         .expect(200);
 
       expect(Array.isArray(response.body.data)).toBe(true);
       expect(response.body.data.length).toBeGreaterThan(0);
+      expectPaginationMeta(response.body);
     });
 
     it('GET /api/v1/majelis-lembaga/:id (Find One)', async () => {
@@ -239,10 +252,12 @@ describe('App (e2e)', () => {
     it('GET /api/v1/profil-sejarah (Find All)', async () => {
       const response = await request(app.getHttpServer())
         .get('/api/v1/profil-sejarah')
+        .query({ page: 1, limit: 10 })
         .expect(200);
 
       expect(Array.isArray(response.body.data)).toBe(true);
       expect(response.body.data.length).toBeGreaterThan(0);
+      expectPaginationMeta(response.body);
     });
 
     it('GET /api/v1/profil-sejarah/:id (Find One)', async () => {
@@ -326,10 +341,12 @@ describe('App (e2e)', () => {
     it('GET /api/v1/profil-visi-misi (Find All)', async () => {
       const response = await request(app.getHttpServer())
         .get('/api/v1/profil-visi-misi')
+        .query({ page: 1, limit: 10 })
         .expect(200);
 
       expect(Array.isArray(response.body.data)).toBe(true);
       expect(response.body.data.length).toBeGreaterThan(0);
+      expectPaginationMeta(response.body);
     });
 
     it('GET /api/v1/profil-visi-misi/:id (Find One)', async () => {
@@ -411,10 +428,12 @@ describe('App (e2e)', () => {
     it('GET /api/v1/profil-struktur-organisasi (Find All)', async () => {
       const response = await request(app.getHttpServer())
         .get('/api/v1/profil-struktur-organisasi')
+        .query({ page: 1, limit: 10 })
         .expect(200);
 
       expect(Array.isArray(response.body.data)).toBe(true);
       expect(response.body.data.length).toBeGreaterThan(0);
+      expectPaginationMeta(response.body);
     });
 
     it('GET /api/v1/profil-struktur-organisasi/:id (Find One)', async () => {

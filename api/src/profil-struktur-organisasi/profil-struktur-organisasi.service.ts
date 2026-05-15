@@ -1,6 +1,11 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { AuditService } from '../audit/audit.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { PaginationQueryDto } from '../shared/dto/pagination-query.dto';
+import {
+  createPaginatedResult,
+  getPaginationParams,
+} from '../shared/pagination/paginated-result';
 import { CreateProfilStrukturOrganisasiDto } from './dto/create-profil-struktur-organisasi.dto';
 import { UpdateProfilStrukturOrganisasiDto } from './dto/update-profil-struktur-organisasi.dto';
 
@@ -22,11 +27,20 @@ export class ProfilStrukturOrganisasiService {
     return data;
   }
 
-  async findAll() {
-    return this.prisma.profilStrukturOrganisasi.findMany({
-      where: { deletedAt: null },
-      orderBy: { updatedAt: 'desc' },
-    });
+  async findAll(query: PaginationQueryDto) {
+    const { skip, take } = getPaginationParams(query);
+    const where = { deletedAt: null };
+    const [items, totalItems] = await this.prisma.$transaction([
+      this.prisma.profilStrukturOrganisasi.findMany({
+        where,
+        skip,
+        take,
+        orderBy: { updatedAt: 'desc' },
+      }),
+      this.prisma.profilStrukturOrganisasi.count({ where }),
+    ]);
+
+    return createPaginatedResult(items, totalItems, query);
   }
 
   async findOne(id: number) {
