@@ -49,9 +49,38 @@ model MajelisLembaga {
   fotoKetua     String?
   sampulMajelis String?
   videoProfil   String?
+  programKerja  ProgramKerja[]
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
   deletedAt     DateTime?
+}
+
+model ProgramKerja {
+  id               Int            @id @default(autoincrement())
+  slug             String         @unique
+  judul            String
+  majelisLembagaId Int
+  majelisLembaga   MajelisLembaga @relation(fields: [majelisLembagaId], references: [id])
+  foto             String
+  deskripsi        String         @db.Text
+  kegiatan         Kegiatan[]
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  deletedAt        DateTime?
+}
+
+model Kegiatan {
+  id             Int          @id @default(autoincrement())
+  slug           String       @unique
+  judul          String
+  foto           String[]
+  deskripsi      String       @db.Text
+  tanggal        DateTime
+  programKerjaId Int
+  programKerja   ProgramKerja @relation(fields: [programKerjaId], references: [id])
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  deletedAt      DateTime?
 }
 
 model AuditLog {

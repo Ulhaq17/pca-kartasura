@@ -69,6 +69,8 @@ describe('App (e2e)', () => {
   afterAll(async () => {
     // Cleanup database
     await prisma.auditLog.deleteMany();
+    await prisma.kegiatan.deleteMany();
+    await prisma.programKerja.deleteMany();
     await prisma.majelisLembaga.deleteMany();
     await prisma.profilSejarah.deleteMany();
     await prisma.profilStrukturOrganisasi.deleteMany();
@@ -222,6 +224,284 @@ describe('App (e2e)', () => {
       const deleteLog = await prisma.auditLog.findFirst({
         where: {
           entityName: 'MajelisLembaga',
+          entityId: createdId,
+          action: 'DELETE',
+        },
+      });
+      expect(deleteLog).not.toBeNull();
+    });
+  });
+
+  describe('ProgramKerja (e2e)', () => {
+    let majelisLembagaId: number;
+    let createdId: number;
+    let createdSlug: string;
+
+    beforeAll(async () => {
+      const majelis = await request(app.getHttpServer())
+        .post('/api/v1/majelis-lembaga')
+        .field('nama', 'Majelis Pendidikan')
+        .field('deskripsi', 'Mengelola program pendidikan.')
+        .field('namaKetua', 'Fatimah')
+        .field('bioKetua', 'Aktif dalam pengembangan pendidikan.')
+        .expect(201);
+
+      majelisLembagaId = majelis.body.data.id;
+    });
+
+    it('POST /api/v1/program-kerja (Create)', async () => {
+      const response = await request(app.getHttpServer())
+        .post('/api/v1/program-kerja')
+        .field('judul', 'Penguatan Literasi Keluarga')
+        .field('majelisLembagaId', String(majelisLembagaId))
+        .field('deskripsi', 'Program pendampingan literasi untuk keluarga.')
+        .attach('foto', Buffer.from('fake-program-image'), 'program.jpg')
+        .expect(201);
+
+      expect(response.body.data).toHaveProperty('id');
+      expect(response.body.data.slug).toBe('penguatan-literasi-keluarga');
+      expect(response.body.data.judul).toBe('Penguatan Literasi Keluarga');
+      expect(response.body.data.foto).toContain('test-photo.jpg');
+      expect(response.body.data.majelisLembaga.id).toBe(majelisLembagaId);
+
+      createdId = response.body.data.id;
+      createdSlug = response.body.data.slug;
+    });
+
+    it('GET /api/v1/program-kerja (Find All)', async () => {
+      const response = await request(app.getHttpServer())
+        .get('/api/v1/program-kerja')
+        .query({ page: 1, limit: 10, majelisLembagaId })
+        .expect(200);
+
+      expect(Array.isArray(response.body.data)).toBe(true);
+      expect(response.body.data.length).toBeGreaterThan(0);
+      expectPaginationMeta(response.body);
+    });
+
+    it('GET /api/v1/program-kerja/:id (Find One)', async () => {
+      const response = await request(app.getHttpServer())
+        .get(`/api/v1/program-kerja/${createdId}`)
+        .expect(200);
+
+      expect(response.body.data.id).toBe(createdId);
+      expect(response.body.data.slug).toBe(createdSlug);
+    });
+
+    it('GET /api/v1/program-kerja/slug/:slug (Find By Slug)', async () => {
+      const response = await request(app.getHttpServer())
+        .get(`/api/v1/program-kerja/slug/${createdSlug}`)
+        .expect(200);
+
+      expect(response.body.data.id).toBe(createdId);
+      expect(response.body.data.slug).toBe(createdSlug);
+    });
+
+    it('PATCH /api/v1/program-kerja/:id (Update)', async () => {
+      const response = await request(app.getHttpServer())
+        .patch(`/api/v1/program-kerja/${createdId}`)
+        .field('judul', 'Literasi Keluarga Berkemajuan')
+        .field('deskripsi', 'Deskripsi program yang sudah diperbarui.')
+        .attach('foto', Buffer.from('fake-updated-program-image'), 'program-baru.jpg')
+        .expect(200);
+
+      expect(response.body.data.id).toBe(createdId);
+      expect(response.body.data.slug).toBe('literasi-keluarga-berkemajuan');
+      expect(response.body.data.deskripsi).toBe(
+        'Deskripsi program yang sudah diperbarui.',
+      );
+      expect(mockStorageService.deleteFile).toHaveBeenCalledWith(
+        'http://localhost:9000/pca-bucket/test-photo.jpg',
+      );
+
+      createdSlug = response.body.data.slug;
+    });
+
+    it('GET /api/v1/program-kerja/:id/history (Audit Logs)', async () => {
+      const response = await request(app.getHttpServer())
+        .get(`/api/v1/program-kerja/${createdId}/history`)
+        .expect(200);
+
+      expect(Array.isArray(response.body.data)).toBe(true);
+      expect(response.body.data.length).toBeGreaterThanOrEqual(2);
+      expect(response.body.data[0].action).toBe('UPDATE');
+      expect(response.body.data[1].action).toBe('CREATE');
+    });
+
+    it('DELETE /api/v1/program-kerja/:id (Soft Delete)', async () => {
+      await request(app.getHttpServer())
+        .delete(`/api/v1/program-kerja/${createdId}`)
+        .expect(200);
+
+      await request(app.getHttpServer())
+        .get(`/api/v1/program-kerja/${createdId}`)
+        .expect(404);
+
+      await request(app.getHttpServer())
+        .get(`/api/v1/program-kerja/slug/${createdSlug}`)
+        .expect(404);
+
+      const deletedRecord = await prisma.programKerja.findUnique({
+        where: { id: createdId },
+      });
+      expect(deletedRecord).not.toBeNull();
+      expect(deletedRecord?.deletedAt).toBeInstanceOf(Date);
+
+      const deleteLog = await prisma.auditLog.findFirst({
+        where: {
+          entityName: 'ProgramKerja',
+          entityId: createdId,
+          action: 'DELETE',
+        },
+      });
+      expect(deleteLog).not.toBeNull();
+    });
+  });
+
+  describe('Kegiatan (e2e)', () => {
+    let programKerjaId: number;
+    let createdId: number;
+    let createdSlug: string;
+
+    beforeAll(async () => {
+      const majelis = await request(app.getHttpServer())
+        .post('/api/v1/majelis-lembaga')
+        .field('nama', 'Majelis Kesehatan')
+        .field('deskripsi', 'Mengelola program kesehatan.')
+        .field('namaKetua', 'Aisyah')
+        .field('bioKetua', 'Aktif dalam layanan kesehatan masyarakat.')
+        .expect(201);
+
+      const program = await request(app.getHttpServer())
+        .post('/api/v1/program-kerja')
+        .field('judul', 'Posyandu Berkemajuan')
+        .field('majelisLembagaId', String(majelis.body.data.id))
+        .field('deskripsi', 'Program layanan kesehatan keluarga.')
+        .attach('foto', Buffer.from('fake-health-program-image'), 'posyandu.jpg')
+        .expect(201);
+
+      programKerjaId = program.body.data.id;
+    });
+
+    it('POST /api/v1/kegiatan (Create)', async () => {
+      const response = await request(app.getHttpServer())
+        .post('/api/v1/kegiatan')
+        .field('judul', 'Pemeriksaan Kesehatan Ibu dan Anak')
+        .field('deskripsi', 'Kegiatan pemeriksaan kesehatan rutin.')
+        .field('tanggal', '2026-05-15T09:00:00.000Z')
+        .field('programKerjaId', String(programKerjaId))
+        .attach('foto', Buffer.from('fake-activity-image-1'), 'kegiatan-1.jpg')
+        .attach('foto', Buffer.from('fake-activity-image-2'), 'kegiatan-2.jpg')
+        .attach('foto', Buffer.from('fake-activity-image-3'), 'kegiatan-3.jpg')
+        .attach('foto', Buffer.from('fake-activity-image-4'), 'kegiatan-4.jpg')
+        .expect(201);
+
+      expect(response.body.data).toHaveProperty('id');
+      expect(response.body.data.slug).toBe('pemeriksaan-kesehatan-ibu-dan-anak');
+      expect(response.body.data.judul).toBe('Pemeriksaan Kesehatan Ibu dan Anak');
+      expect(response.body.data.foto).toHaveLength(4);
+      expect(response.body.data.programKerja.id).toBe(programKerjaId);
+
+      createdId = response.body.data.id;
+      createdSlug = response.body.data.slug;
+    });
+
+    it('POST /api/v1/kegiatan rejects more than 4 photos', async () => {
+      await request(app.getHttpServer())
+        .post('/api/v1/kegiatan')
+        .field('judul', 'Kegiatan Dengan Banyak Foto')
+        .field('deskripsi', 'Harus ditolak karena lebih dari 4 foto.')
+        .field('tanggal', '2026-05-15T09:00:00.000Z')
+        .field('programKerjaId', String(programKerjaId))
+        .attach('foto', Buffer.from('fake-activity-image-1'), 'lebih-1.jpg')
+        .attach('foto', Buffer.from('fake-activity-image-2'), 'lebih-2.jpg')
+        .attach('foto', Buffer.from('fake-activity-image-3'), 'lebih-3.jpg')
+        .attach('foto', Buffer.from('fake-activity-image-4'), 'lebih-4.jpg')
+        .attach('foto', Buffer.from('fake-activity-image-5'), 'lebih-5.jpg')
+        .expect(400);
+    });
+
+    it('GET /api/v1/kegiatan (Find All)', async () => {
+      const response = await request(app.getHttpServer())
+        .get('/api/v1/kegiatan')
+        .query({ page: 1, limit: 10, programKerjaId })
+        .expect(200);
+
+      expect(Array.isArray(response.body.data)).toBe(true);
+      expect(response.body.data.length).toBeGreaterThan(0);
+      expectPaginationMeta(response.body);
+    });
+
+    it('GET /api/v1/kegiatan/:id (Find One)', async () => {
+      const response = await request(app.getHttpServer())
+        .get(`/api/v1/kegiatan/${createdId}`)
+        .expect(200);
+
+      expect(response.body.data.id).toBe(createdId);
+      expect(response.body.data.slug).toBe(createdSlug);
+    });
+
+    it('GET /api/v1/kegiatan/slug/:slug (Find By Slug)', async () => {
+      const response = await request(app.getHttpServer())
+        .get(`/api/v1/kegiatan/slug/${createdSlug}`)
+        .expect(200);
+
+      expect(response.body.data.id).toBe(createdId);
+      expect(response.body.data.slug).toBe(createdSlug);
+    });
+
+    it('PATCH /api/v1/kegiatan/:id (Update)', async () => {
+      const response = await request(app.getHttpServer())
+        .patch(`/api/v1/kegiatan/${createdId}`)
+        .field('judul', 'Pemeriksaan Kesehatan Rutin')
+        .field('deskripsi', 'Kegiatan kesehatan yang sudah diperbarui.')
+        .field('programKerjaId', String(programKerjaId))
+        .attach('foto', Buffer.from('fake-updated-activity-image'), 'kegiatan-baru.jpg')
+        .expect(200);
+
+      expect(response.body.data.id).toBe(createdId);
+      expect(response.body.data.slug).toBe('pemeriksaan-kesehatan-rutin');
+      expect(response.body.data.foto).toHaveLength(1);
+      expect(response.body.data.deskripsi).toBe(
+        'Kegiatan kesehatan yang sudah diperbarui.',
+      );
+
+      createdSlug = response.body.data.slug;
+    });
+
+    it('GET /api/v1/kegiatan/:id/history (Audit Logs)', async () => {
+      const response = await request(app.getHttpServer())
+        .get(`/api/v1/kegiatan/${createdId}/history`)
+        .expect(200);
+
+      expect(Array.isArray(response.body.data)).toBe(true);
+      expect(response.body.data.length).toBeGreaterThanOrEqual(2);
+      expect(response.body.data[0].action).toBe('UPDATE');
+      expect(response.body.data[1].action).toBe('CREATE');
+    });
+
+    it('DELETE /api/v1/kegiatan/:id (Soft Delete)', async () => {
+      await request(app.getHttpServer())
+        .delete(`/api/v1/kegiatan/${createdId}`)
+        .expect(200);
+
+      await request(app.getHttpServer())
+        .get(`/api/v1/kegiatan/${createdId}`)
+        .expect(404);
+
+      await request(app.getHttpServer())
+        .get(`/api/v1/kegiatan/slug/${createdSlug}`)
+        .expect(404);
+
+      const deletedRecord = await prisma.kegiatan.findUnique({
+        where: { id: createdId },
+      });
+      expect(deletedRecord).not.toBeNull();
+      expect(deletedRecord?.deletedAt).toBeInstanceOf(Date);
+
+      const deleteLog = await prisma.auditLog.findFirst({
+        where: {
+          entityName: 'Kegiatan',
           entityId: createdId,
           action: 'DELETE',
         },
