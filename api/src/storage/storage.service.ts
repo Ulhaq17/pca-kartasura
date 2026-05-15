@@ -64,7 +64,8 @@ export class StorageService implements OnModuleInit {
         await this.minioClient.removeObject(this.bucketName, fileName);
       }
     } catch (error) {
-      this.logger.error(`Failed to delete file: ${fileUrl}`, error.stack);
+      this.logger.error(`Failed to delete file: ${fileUrl} ${error instanceof Error ? error.message : String(error)}`);
+      throw error;
     }
   }
 }

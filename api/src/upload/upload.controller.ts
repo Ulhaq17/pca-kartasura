@@ -55,7 +55,7 @@ export class UploadController {
         size: compressedBuffer.length,
       };
     } catch (error) {
-      throw new BadRequestException(`Upload failed: ${error.message}`);
+      throw new BadRequestException(`Upload failed: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 }
