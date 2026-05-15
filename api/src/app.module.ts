@@ -5,6 +5,7 @@ import { AppService } from './app.service';
 import { PrismaModule } from './prisma/prisma.module';
 import { HealthModule } from './health/health.module';
 import { ProfilSejarahModule } from './profil-sejarah/profil-sejarah.module';
+import { ProfilVisiMisiModule } from './profil-visi-misi/profil-visi-misi.module';
 
 @Module({
   imports: [
@@ -14,6 +15,7 @@ import { ProfilSejarahModule } from './profil-sejarah/profil-sejarah.module';
     PrismaModule,
     HealthModule,
     ProfilSejarahModule,
+    ProfilVisiMisiModule,
   ],
   controllers: [AppController],
   providers: [AppService],

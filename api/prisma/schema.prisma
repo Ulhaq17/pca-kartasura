@@ -22,6 +22,15 @@ model ProfilSejarah {
   deletedAt DateTime?
 }
 
+model ProfilVisiMisi {
+  id        Int      @id @default(autoincrement())
+  visi      String   @db.Text
+  misi      String   @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+}
+
 model AuditLog {
   id         Int      @id @default(autoincrement())
   entityName String
