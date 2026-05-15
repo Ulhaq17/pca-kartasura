@@ -51,7 +51,7 @@ services:
       - ./api:/usr/src/app
       - /usr/src/app/node_modules # Mencegah bentrok node_modules lokal dengan container
     ports:
-      - "3000:3000"
+      - "3001:3001"
     command: sh -c "npm install && npm run start:dev"
     env_file:
       - ./api/.env
@@ -76,13 +76,13 @@ services:
       - ./web:/usr/src/app
       - /usr/src/app/node_modules # Mencegah bentrok node_modules lokal dengan container
     ports:
-      - "3001:3000"
+      - "3000:3000"
     command: sh -c "npm install && npm run dev"
     env_file:
       - ./web/.env
     environment:
       # Internal URL untuk komunikasi server-side
-      - API_URL=http://api:3000
+      - API_URL=http://api:3001
       # Override DATABASE_URL untuk Web jika Next.js menggunakan koneksi DB langsung via Prisma
       - DATABASE_URL=postgresql://pca-kartasura:pcakartasura123@postgres:5432/pca_db_development
     depends_on:
