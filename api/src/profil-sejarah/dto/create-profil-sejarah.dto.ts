@@ -3,7 +3,7 @@ import { IsNotEmpty, IsString, IsOptional } from 'class-validator';
 export class CreateProfilSejarahDto {
   @IsNotEmpty()
   @IsString()
-  konten: string;
+  konten!: string;
 
   @IsOptional()
   @IsString()
