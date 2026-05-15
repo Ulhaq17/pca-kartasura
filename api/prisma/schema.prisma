@@ -12,3 +12,20 @@ generator client {
 datasource db {
   provider = "postgresql"
 }
+
+model ProfilSejarah {
+  id        Int      @id @default(autoincrement())
+  foto      String?
+  konten    String   @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model AuditLog {
+  id         Int      @id @default(autoincrement())
+  entityName String
+  entityId   Int
+  action     String
+  changes    Json?
+  createdAt  DateTime @default(now())
+}

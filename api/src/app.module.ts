@@ -4,7 +4,7 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { PrismaModule } from './prisma/prisma.module';
 import { HealthModule } from './health/health.module';
-import { UploadModule } from './upload/upload.module';
+import { ProfilSejarahModule } from './profil-sejarah/profil-sejarah.module';
 
 @Module({
   imports: [
@@ -13,7 +13,7 @@ import { UploadModule } from './upload/upload.module';
     }),
     PrismaModule,
     HealthModule,
-    UploadModule,
+    ProfilSejarahModule,
   ],
   controllers: [AppController],
   providers: [AppService],
