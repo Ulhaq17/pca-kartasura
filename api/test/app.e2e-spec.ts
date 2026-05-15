@@ -59,6 +59,7 @@ describe('App (e2e)', () => {
     // Cleanup database
     await prisma.auditLog.deleteMany();
     await prisma.profilSejarah.deleteMany();
+    await prisma.profilStrukturOrganisasi.deleteMany();
     await prisma.profilVisiMisi.deleteMany();
     await app.close();
   });
@@ -243,6 +244,89 @@ describe('App (e2e)', () => {
       const deleteLog = await prisma.auditLog.findFirst({
         where: {
           entityName: 'ProfilVisiMisi',
+          entityId: createdId,
+          action: 'DELETE',
+        },
+      });
+      expect(deleteLog).not.toBeNull();
+    });
+  });
+
+  describe('ProfilStrukturOrganisasi (e2e)', () => {
+    let createdId: number;
+
+    it('POST /api/v1/profil-struktur-organisasi (Create)', async () => {
+      const response = await request(app.getHttpServer())
+        .post('/api/v1/profil-struktur-organisasi')
+        .attach('foto', Buffer.from('fake-structure-image'), 'struktur.jpg')
+        .expect(201);
+
+      expect(response.body.data).toHaveProperty('id');
+      expect(response.body.data.foto).toContain('test-photo.jpg');
+
+      createdId = response.body.data.id;
+    });
+
+    it('GET /api/v1/profil-struktur-organisasi (Find All)', async () => {
+      const response = await request(app.getHttpServer())
+        .get('/api/v1/profil-struktur-organisasi')
+        .expect(200);
+
+      expect(Array.isArray(response.body.data)).toBe(true);
+      expect(response.body.data.length).toBeGreaterThan(0);
+    });
+
+    it('GET /api/v1/profil-struktur-organisasi/:id (Find One)', async () => {
+      const response = await request(app.getHttpServer())
+        .get(`/api/v1/profil-struktur-organisasi/${createdId}`)
+        .expect(200);
+
+      expect(response.body.data.id).toBe(createdId);
+      expect(response.body.data.foto).toContain('test-photo.jpg');
+    });
+
+    it('PATCH /api/v1/profil-struktur-organisasi/:id (Update)', async () => {
+      const response = await request(app.getHttpServer())
+        .patch(`/api/v1/profil-struktur-organisasi/${createdId}`)
+        .attach('foto', Buffer.from('fake-updated-structure-image'), 'struktur-baru.jpg')
+        .expect(200);
+
+      expect(response.body.data.id).toBe(createdId);
+      expect(response.body.data.foto).toContain('test-photo.jpg');
+      expect(mockStorageService.deleteFile).toHaveBeenCalledWith(
+        'http://localhost:9000/pca-bucket/test-photo.jpg',
+      );
+    });
+
+    it('GET /api/v1/profil-struktur-organisasi/:id/history (Audit Logs)', async () => {
+      const response = await request(app.getHttpServer())
+        .get(`/api/v1/profil-struktur-organisasi/${createdId}/history`)
+        .expect(200);
+
+      expect(Array.isArray(response.body.data)).toBe(true);
+      expect(response.body.data.length).toBeGreaterThanOrEqual(2);
+      expect(response.body.data[0].action).toBe('UPDATE');
+      expect(response.body.data[1].action).toBe('CREATE');
+    });
+
+    it('DELETE /api/v1/profil-struktur-organisasi/:id (Soft Delete)', async () => {
+      await request(app.getHttpServer())
+        .delete(`/api/v1/profil-struktur-organisasi/${createdId}`)
+        .expect(200);
+
+      await request(app.getHttpServer())
+        .get(`/api/v1/profil-struktur-organisasi/${createdId}`)
+        .expect(404);
+
+      const deletedRecord = await prisma.profilStrukturOrganisasi.findUnique({
+        where: { id: createdId },
+      });
+      expect(deletedRecord).not.toBeNull();
+      expect(deletedRecord?.deletedAt).toBeInstanceOf(Date);
+
+      const deleteLog = await prisma.auditLog.findFirst({
+        where: {
+          entityName: 'ProfilStrukturOrganisasi',
           entityId: createdId,
           action: 'DELETE',
         },
