@@ -63,11 +63,7 @@ export class ProfilSejarahController {
   }
 
   @Delete(':id')
-  async remove(@Param('id', ParseIntPipe) id: number) {
-    const existing = await this.profilSejarahService.findOne(id);
-    if (existing.foto) {
-      await this.storageService.deleteFile(existing.foto);
-    }
+  remove(@Param('id', ParseIntPipe) id: number) {
     return this.profilSejarahService.remove(id);
   }
 

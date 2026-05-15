@@ -19,6 +19,7 @@ model ProfilSejarah {
   konten    String   @db.Text
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  deletedAt DateTime?
 }
 
 model AuditLog {

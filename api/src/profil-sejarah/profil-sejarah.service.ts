@@ -24,13 +24,14 @@ export class ProfilSejarahService {
 
   async findAll() {
     return this.prisma.profilSejarah.findMany({
+      where: { deletedAt: null },
       orderBy: { updatedAt: 'desc' },
     });
   }
 
   async findOne(id: number) {
-    const data = await this.prisma.profilSejarah.findUnique({
-      where: { id },
+    const data = await this.prisma.profilSejarah.findFirst({
+      where: { id, deletedAt: null },
     });
     
     if (!data) {
@@ -57,12 +58,16 @@ export class ProfilSejarahService {
 
   async remove(id: number) {
     const existing = await this.findOne(id);
-    
-    await this.prisma.profilSejarah.delete({
+
+    const data = await this.prisma.profilSejarah.update({
       where: { id },
+      data: { deletedAt: new Date() },
     });
-    
-    await this.auditService.logChange(this.entityName, id, 'DELETE', existing);
+
+    await this.auditService.logChange(this.entityName, id, 'DELETE', {
+      before: existing,
+      after: data,
+    });
     return { success: true };
   }
 

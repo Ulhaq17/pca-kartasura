@@ -136,10 +136,24 @@ describe('App (e2e)', () => {
         .delete(`/api/v1/profil-sejarah/${createdId}`)
         .expect(200);
 
-      // Verify deletion
       await request(app.getHttpServer())
         .get(`/api/v1/profil-sejarah/${createdId}`)
         .expect(404);
+
+      const deletedRecord = await prisma.profilSejarah.findUnique({
+        where: { id: createdId },
+      });
+      expect(deletedRecord).not.toBeNull();
+      expect(deletedRecord?.deletedAt).toBeInstanceOf(Date);
+
+      const deleteLog = await prisma.auditLog.findFirst({
+        where: {
+          entityName: 'ProfilSejarah',
+          entityId: createdId,
+          action: 'DELETE',
+        },
+      });
+      expect(deleteLog).not.toBeNull();
     });
   });
 });
