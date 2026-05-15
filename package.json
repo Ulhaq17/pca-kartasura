@@ -1,0 +1,19 @@
+{
+  "name": "pca-kartasura",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "concurrently -n web,api \"npm run dev -w @pca/web\" \"npm run start:dev -w @pca/api\"",
+    "dev:web": "npm run dev -w @pca/web",
+    "dev:api": "npm run start:dev -w @pca/api",
+    "build": "npm run build --workspaces --if-present",
+    "lint": "npm run lint --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present"
+  },
+  "devDependencies": {
+    "concurrently": "^9.0.0"
+  }
+}
