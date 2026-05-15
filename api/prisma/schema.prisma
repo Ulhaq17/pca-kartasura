@@ -39,6 +39,21 @@ model ProfilStrukturOrganisasi {
   deletedAt DateTime?
 }
 
+model MajelisLembaga {
+  id            Int      @id @default(autoincrement())
+  slug          String   @unique
+  nama          String
+  deskripsi     String   @db.Text
+  namaKetua     String
+  bioKetua      String   @db.Text
+  fotoKetua     String?
+  sampulMajelis String?
+  videoProfil   String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  deletedAt     DateTime?
+}
+
 model AuditLog {
   id         Int      @id @default(autoincrement())
   entityName String

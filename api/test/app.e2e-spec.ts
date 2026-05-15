@@ -58,6 +58,7 @@ describe('App (e2e)', () => {
   afterAll(async () => {
     // Cleanup database
     await prisma.auditLog.deleteMany();
+    await prisma.majelisLembaga.deleteMany();
     await prisma.profilSejarah.deleteMany();
     await prisma.profilStrukturOrganisasi.deleteMany();
     await prisma.profilVisiMisi.deleteMany();
@@ -73,6 +74,146 @@ describe('App (e2e)', () => {
       return request(app.getHttpServer())
         .get('/api/v1/health/ready')
         .expect(200);
+    });
+  });
+
+  describe('MajelisLembaga (e2e)', () => {
+    let createdId: number;
+    let createdSlug: string;
+
+    it('POST /api/v1/majelis-lembaga (Create)', async () => {
+      const response = await request(app.getHttpServer())
+        .post('/api/v1/majelis-lembaga')
+        .field('nama', 'Majelis Tabligh dan Ketarjihan')
+        .field('deskripsi', 'Mengelola program dakwah dan ketarjihan.')
+        .field('namaKetua', 'Siti Aminah')
+        .field('bioKetua', 'Aktif dalam dakwah dan pembinaan jamaah.')
+        .field('videoProfil', 'https://www.youtube.com/watch?v=dQw4w9WgXcQ')
+        .attach('fotoKetua', Buffer.from('fake-chairperson-image'), 'ketua.jpg')
+        .attach(
+          'sampulMajelis',
+          Buffer.from('fake-cover-image'),
+          'sampul.jpg',
+        )
+        .expect(201);
+
+      expect(response.body.data).toHaveProperty('id');
+      expect(response.body.data.slug).toBe('majelis-tabligh-dan-ketarjihan');
+      expect(response.body.data.nama).toBe('Majelis Tabligh dan Ketarjihan');
+      expect(response.body.data.deskripsi).toBe(
+        'Mengelola program dakwah dan ketarjihan.',
+      );
+      expect(response.body.data.namaKetua).toBe('Siti Aminah');
+      expect(response.body.data.bioKetua).toBe(
+        'Aktif dalam dakwah dan pembinaan jamaah.',
+      );
+      expect(response.body.data.fotoKetua).toContain('test-photo.jpg');
+      expect(response.body.data.sampulMajelis).toContain('test-photo.jpg');
+      expect(response.body.data.videoProfil).toBe(
+        'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+      );
+
+      createdId = response.body.data.id;
+      createdSlug = response.body.data.slug;
+    });
+
+    it('GET /api/v1/majelis-lembaga (Find All)', async () => {
+      const response = await request(app.getHttpServer())
+        .get('/api/v1/majelis-lembaga')
+        .expect(200);
+
+      expect(Array.isArray(response.body.data)).toBe(true);
+      expect(response.body.data.length).toBeGreaterThan(0);
+    });
+
+    it('GET /api/v1/majelis-lembaga/:id (Find One)', async () => {
+      const response = await request(app.getHttpServer())
+        .get(`/api/v1/majelis-lembaga/${createdId}`)
+        .expect(200);
+
+      expect(response.body.data.id).toBe(createdId);
+      expect(response.body.data.slug).toBe(createdSlug);
+    });
+
+    it('GET /api/v1/majelis-lembaga/slug/:slug (Find By Slug)', async () => {
+      const response = await request(app.getHttpServer())
+        .get(`/api/v1/majelis-lembaga/slug/${createdSlug}`)
+        .expect(200);
+
+      expect(response.body.data.id).toBe(createdId);
+      expect(response.body.data.slug).toBe(createdSlug);
+    });
+
+    it('PATCH /api/v1/majelis-lembaga/:id (Update)', async () => {
+      const response = await request(app.getHttpServer())
+        .patch(`/api/v1/majelis-lembaga/${createdId}`)
+        .field('nama', 'Majelis Tarjih')
+        .field('deskripsi', 'Deskripsi majelis yang sudah diperbarui.')
+        .attach(
+          'fotoKetua',
+          Buffer.from('fake-updated-chairperson-image'),
+          'ketua-baru.jpg',
+        )
+        .attach(
+          'sampulMajelis',
+          Buffer.from('fake-updated-cover-image'),
+          'sampul-baru.jpg',
+        )
+        .expect(200);
+
+      expect(response.body.data.id).toBe(createdId);
+      expect(response.body.data.nama).toBe('Majelis Tarjih');
+      expect(response.body.data.slug).toBe('majelis-tarjih');
+      expect(response.body.data.deskripsi).toBe(
+        'Deskripsi majelis yang sudah diperbarui.',
+      );
+      expect(response.body.data.fotoKetua).toContain('test-photo.jpg');
+      expect(response.body.data.sampulMajelis).toContain('test-photo.jpg');
+      expect(mockStorageService.deleteFile).toHaveBeenCalledWith(
+        'http://localhost:9000/pca-bucket/test-photo.jpg',
+      );
+
+      createdSlug = response.body.data.slug;
+    });
+
+    it('GET /api/v1/majelis-lembaga/:id/history (Audit Logs)', async () => {
+      const response = await request(app.getHttpServer())
+        .get(`/api/v1/majelis-lembaga/${createdId}/history`)
+        .expect(200);
+
+      expect(Array.isArray(response.body.data)).toBe(true);
+      expect(response.body.data.length).toBeGreaterThanOrEqual(2);
+      expect(response.body.data[0].action).toBe('UPDATE');
+      expect(response.body.data[1].action).toBe('CREATE');
+    });
+
+    it('DELETE /api/v1/majelis-lembaga/:id (Soft Delete)', async () => {
+      await request(app.getHttpServer())
+        .delete(`/api/v1/majelis-lembaga/${createdId}`)
+        .expect(200);
+
+      await request(app.getHttpServer())
+        .get(`/api/v1/majelis-lembaga/${createdId}`)
+        .expect(404);
+
+      await request(app.getHttpServer())
+        .get(`/api/v1/majelis-lembaga/slug/${createdSlug}`)
+        .expect(404);
+
+      const deletedRecord = await prisma.majelisLembaga.findUnique({
+        where: { id: createdId },
+      });
+      expect(deletedRecord).not.toBeNull();
+      expect(deletedRecord?.deletedAt).toBeInstanceOf(Date);
+
+      const deleteLog = await prisma.auditLog.findFirst({
+        where: {
+          entityName: 'MajelisLembaga',
+          entityId: createdId,
+          action: 'DELETE',
+        },
+      });
+      expect(deleteLog).not.toBeNull();
     });
   });
 

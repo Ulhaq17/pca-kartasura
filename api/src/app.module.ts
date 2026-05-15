@@ -4,6 +4,7 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { PrismaModule } from './prisma/prisma.module';
 import { HealthModule } from './health/health.module';
+import { MajelisLembagaModule } from './majelis-lembaga/majelis-lembaga.module';
 import { ProfilSejarahModule } from './profil-sejarah/profil-sejarah.module';
 import { ProfilStrukturOrganisasiModule } from './profil-struktur-organisasi/profil-struktur-organisasi.module';
 import { ProfilVisiMisiModule } from './profil-visi-misi/profil-visi-misi.module';
@@ -15,6 +16,7 @@ import { ProfilVisiMisiModule } from './profil-visi-misi/profil-visi-misi.module
     }),
     PrismaModule,
     HealthModule,
+    MajelisLembagaModule,
     ProfilSejarahModule,
     ProfilStrukturOrganisasiModule,
     ProfilVisiMisiModule,
