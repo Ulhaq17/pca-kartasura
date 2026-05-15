@@ -1,0 +1,96 @@
+version: '3.8'
+
+services:
+  # ==========================================
+  # Database Service (PostgreSQL)
+  # ==========================================
+  postgres:
+    image: postgres:16-alpine
+    container_name: pca-kartasura-postgres
+    restart: always
+    environment:
+      POSTGRES_USER: pca-kartasura
+      POSTGRES_PASSWORD: pcakartasura123
+      POSTGRES_DB: pca_db_development
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pca-kartasura -d pca_db_development"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ==========================================
+  # Cache Service (Redis)
+  # ==========================================
+  redis:
+    image: redis:7-alpine
+    container_name: pca-kartasura-redis
+    restart: always
+    command: redis-server --appendonly yes
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ==========================================
+  # Backend API Service (NestJS)
+  # ==========================================
+  api:
+    image: node:22-alpine
+    container_name: pca-kartasura-api
+    working_dir: /usr/src/app
+    volumes:
+      - ./api:/usr/src/app
+      - /usr/src/app/node_modules # Mencegah bentrok node_modules lokal dengan container
+    ports:
+      - "3000:3000"
+    command: sh -c "npm install && npm run start:dev"
+    env_file:
+      - ./api/.env
+    environment:
+      # Kita override host ke service Docker agar bisa saling terhubung di dalam container
+      - DATABASE_URL=postgresql://pca-kartasura:pcakartasura123@postgres:5432/pca_db_development
+      - REDIS_HOST=redis
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  # ==========================================
+  # Frontend Web Service (Next.js)
+  # ==========================================
+  web:
+    image: node:22-alpine
+    container_name: pca-kartasura-web
+    working_dir: /usr/src/app
+    volumes:
+      - ./web:/usr/src/app
+      - /usr/src/app/node_modules # Mencegah bentrok node_modules lokal dengan container
+    ports:
+      - "3001:3000"
+    command: sh -c "npm install && npm run dev"
+    env_file:
+      - ./web/.env
+    environment:
+      # Internal URL untuk komunikasi server-side
+      - API_URL=http://api:3000
+      # Override DATABASE_URL untuk Web jika Next.js menggunakan koneksi DB langsung via Prisma
+      - DATABASE_URL=postgresql://pca-kartasura:pcakartasura123@postgres:5432/pca_db_development
+    depends_on:
+      - api
+
+# ==========================================
+# Named Volumes untuk persistensi data
+# ==========================================
+volumes:
+  postgres_data:
+  redis_data:
