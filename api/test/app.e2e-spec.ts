@@ -69,6 +69,7 @@ describe('App (e2e)', () => {
   afterAll(async () => {
     // Cleanup database
     await prisma.auditLog.deleteMany();
+    await prisma.artikelKegiatan.deleteMany();
     await prisma.kegiatan.deleteMany();
     await prisma.programKerja.deleteMany();
     await prisma.majelisLembaga.deleteMany();
@@ -502,6 +503,139 @@ describe('App (e2e)', () => {
       const deleteLog = await prisma.auditLog.findFirst({
         where: {
           entityName: 'Kegiatan',
+          entityId: createdId,
+          action: 'DELETE',
+        },
+      });
+      expect(deleteLog).not.toBeNull();
+    });
+  });
+
+  describe('ArtikelKegiatan (e2e)', () => {
+    let majelisLembagaId: number;
+    let createdId: number;
+    let createdSlug: string;
+
+    beforeAll(async () => {
+      const majelis = await request(app.getHttpServer())
+        .post('/api/v1/majelis-lembaga')
+        .field('nama', 'Majelis Sosial')
+        .field('deskripsi', 'Mengelola program sosial kemasyarakatan.')
+        .field('namaKetua', 'Khadijah')
+        .field('bioKetua', 'Aktif dalam gerakan sosial masyarakat.')
+        .expect(201);
+
+      majelisLembagaId = majelis.body.data.id;
+    });
+
+    it('POST /api/v1/artikel-kegiatan (Create)', async () => {
+      const response = await request(app.getHttpServer())
+        .post('/api/v1/artikel-kegiatan')
+        .field('judul', 'Bakti Sosial Ramadhan')
+        .field('tanggal', '2026-05-15T09:00:00.000Z')
+        .field('penulis', 'Admin PCA Kartasura')
+        .field('deskripsi', 'Artikel kegiatan bakti sosial ramadhan.')
+        .field('majelisLembagaId', String(majelisLembagaId))
+        .attach('sampul', Buffer.from('fake-article-cover'), 'artikel.jpg')
+        .expect(201);
+
+      expect(response.body.data).toHaveProperty('id');
+      expect(response.body.data.slug).toBe('bakti-sosial-ramadhan');
+      expect(response.body.data.judul).toBe('Bakti Sosial Ramadhan');
+      expect(response.body.data.penulis).toBe('Admin PCA Kartasura');
+      expect(response.body.data.sampul).toContain('test-photo.jpg');
+      expect(response.body.data.majelisLembagaId).toBe(majelisLembagaId);
+      expect(response.body.data.majelisLembaga).toBeUndefined();
+
+      createdId = response.body.data.id;
+      createdSlug = response.body.data.slug;
+    });
+
+    it('GET /api/v1/artikel-kegiatan (Find All)', async () => {
+      const response = await request(app.getHttpServer())
+        .get('/api/v1/artikel-kegiatan')
+        .query({ page: 1, limit: 10, majelisLembagaId })
+        .expect(200);
+
+      expect(Array.isArray(response.body.data)).toBe(true);
+      expect(response.body.data.length).toBeGreaterThan(0);
+      expect(response.body.data[0].majelisLembaga).toBeUndefined();
+      expectPaginationMeta(response.body);
+    });
+
+    it('GET /api/v1/artikel-kegiatan/:id (Find One)', async () => {
+      const response = await request(app.getHttpServer())
+        .get(`/api/v1/artikel-kegiatan/${createdId}`)
+        .expect(200);
+
+      expect(response.body.data.id).toBe(createdId);
+      expect(response.body.data.slug).toBe(createdSlug);
+      expect(response.body.data.majelisLembaga).toBeUndefined();
+    });
+
+    it('GET /api/v1/artikel-kegiatan/slug/:slug (Find By Slug)', async () => {
+      const response = await request(app.getHttpServer())
+        .get(`/api/v1/artikel-kegiatan/slug/${createdSlug}`)
+        .expect(200);
+
+      expect(response.body.data.id).toBe(createdId);
+      expect(response.body.data.slug).toBe(createdSlug);
+    });
+
+    it('PATCH /api/v1/artikel-kegiatan/:id (Update)', async () => {
+      const response = await request(app.getHttpServer())
+        .patch(`/api/v1/artikel-kegiatan/${createdId}`)
+        .field('judul', 'Bakti Sosial Ramadhan Berkemajuan')
+        .field('deskripsi', 'Artikel kegiatan yang sudah diperbarui.')
+        .attach('sampul', Buffer.from('fake-updated-article-cover'), 'artikel-baru.jpg')
+        .expect(200);
+
+      expect(response.body.data.id).toBe(createdId);
+      expect(response.body.data.slug).toBe('bakti-sosial-ramadhan-berkemajuan');
+      expect(response.body.data.deskripsi).toBe(
+        'Artikel kegiatan yang sudah diperbarui.',
+      );
+      expect(response.body.data.sampul).toContain('test-photo.jpg');
+      expect(mockStorageService.deleteFile).toHaveBeenCalledWith(
+        'http://localhost:9000/pca-bucket/test-photo.jpg',
+      );
+
+      createdSlug = response.body.data.slug;
+    });
+
+    it('GET /api/v1/artikel-kegiatan/:id/history (Audit Logs)', async () => {
+      const response = await request(app.getHttpServer())
+        .get(`/api/v1/artikel-kegiatan/${createdId}/history`)
+        .expect(200);
+
+      expect(Array.isArray(response.body.data)).toBe(true);
+      expect(response.body.data.length).toBeGreaterThanOrEqual(2);
+      expect(response.body.data[0].action).toBe('UPDATE');
+      expect(response.body.data[1].action).toBe('CREATE');
+    });
+
+    it('DELETE /api/v1/artikel-kegiatan/:id (Soft Delete)', async () => {
+      await request(app.getHttpServer())
+        .delete(`/api/v1/artikel-kegiatan/${createdId}`)
+        .expect(200);
+
+      await request(app.getHttpServer())
+        .get(`/api/v1/artikel-kegiatan/${createdId}`)
+        .expect(404);
+
+      await request(app.getHttpServer())
+        .get(`/api/v1/artikel-kegiatan/slug/${createdSlug}`)
+        .expect(404);
+
+      const deletedRecord = await prisma.artikelKegiatan.findUnique({
+        where: { id: createdId },
+      });
+      expect(deletedRecord).not.toBeNull();
+      expect(deletedRecord?.deletedAt).toBeInstanceOf(Date);
+
+      const deleteLog = await prisma.auditLog.findFirst({
+        where: {
+          entityName: 'ArtikelKegiatan',
           entityId: createdId,
           action: 'DELETE',
         },
