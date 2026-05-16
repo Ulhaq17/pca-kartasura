@@ -6,6 +6,7 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { ArtikelKajianModule } from './artikel-kajian/artikel-kajian.module';
 import { ArtikelKegiatanModule } from './artikel-kegiatan/artikel-kegiatan.module';
+import { BulletinModule } from './bulletin/bulletin.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { HealthModule } from './health/health.module';
 import { KegiatanModule } from './kegiatan/kegiatan.module';
@@ -26,6 +27,7 @@ import { ProgramKerjaModule } from './program-kerja/program-kerja.module';
     AnggotaModule,
     ArtikelKajianModule,
     ArtikelKegiatanModule,
+    BulletinModule,
     PrismaModule,
     HealthModule,
     KegiatanModule,

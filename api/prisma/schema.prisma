@@ -136,6 +136,17 @@ model Pengumuman {
   deletedAt DateTime?
 }
 
+model Bulletin {
+  id        Int       @id @default(autoincrement())
+  judul     String
+  tanggal   DateTime
+  file      String
+  thumbnail String
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+}
+
 model ProgramKerja {
   id               Int            @id @default(autoincrement())
   slug             String         @unique

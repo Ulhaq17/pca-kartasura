@@ -76,6 +76,7 @@ describe('App (e2e)', () => {
   afterAll(async () => {
     // Cleanup database
     await prisma.auditLog.deleteMany();
+    await prisma.bulletin.deleteMany();
     await prisma.pengumuman.deleteMany();
     await prisma.agenda.deleteMany();
     await prisma.anggota.deleteMany();
@@ -665,6 +666,111 @@ describe('App (e2e)', () => {
       const deleteLog = await prisma.auditLog.findFirst({
         where: {
           entityName: 'Pengumuman',
+          entityId: createdId,
+          action: 'DELETE',
+        },
+      });
+      expect(deleteLog).not.toBeNull();
+    });
+  });
+
+  describe('Bulletin (e2e)', () => {
+    let createdId: number;
+
+    it('POST /api/v1/bulletin (Create)', async () => {
+      const response = await request(app.getHttpServer())
+        .post('/api/v1/bulletin')
+        .field('judul', 'Bulletin PCA Kartasura Edisi Mei')
+        .field('tanggal', '2026-05-25T08:00:00.000Z')
+        .attach('file', testImageBuffer, {
+          filename: 'bulletin.svg',
+          contentType: 'image/svg+xml',
+        })
+        .expect(201);
+
+      expect(response.body.data).toHaveProperty('id');
+      expect(response.body.data.judul).toBe('Bulletin PCA Kartasura Edisi Mei');
+      expect(response.body.data.tanggal).toBe('2026-05-25T08:00:00.000Z');
+      expect(response.body.data.file).toContain('test-photo.jpg');
+      expect(response.body.data.thumbnail).toContain('test-thumbnail.jpg');
+      expect(mockStorageService.uploadBuffer).toHaveBeenCalled();
+
+      createdId = response.body.data.id;
+    });
+
+    it('GET /api/v1/bulletin (Find All)', async () => {
+      const response = await request(app.getHttpServer())
+        .get('/api/v1/bulletin')
+        .query({ page: 1, limit: 10 })
+        .expect(200);
+
+      expect(Array.isArray(response.body.data)).toBe(true);
+      expect(response.body.data.length).toBeGreaterThan(0);
+      expectPaginationMeta(response.body);
+    });
+
+    it('GET /api/v1/bulletin/:id (Find One)', async () => {
+      const response = await request(app.getHttpServer())
+        .get(`/api/v1/bulletin/${createdId}`)
+        .expect(200);
+
+      expect(response.body.data.id).toBe(createdId);
+    });
+
+    it('PATCH /api/v1/bulletin/:id (Update)', async () => {
+      const response = await request(app.getHttpServer())
+        .patch(`/api/v1/bulletin/${createdId}`)
+        .field('judul', 'Bulletin PCA Kartasura Edisi Mei Revisi')
+        .attach('file', testImageBuffer, {
+          filename: 'bulletin-baru.svg',
+          contentType: 'image/svg+xml',
+        })
+        .expect(200);
+
+      expect(response.body.data.id).toBe(createdId);
+      expect(response.body.data.judul).toBe(
+        'Bulletin PCA Kartasura Edisi Mei Revisi',
+      );
+      expect(response.body.data.thumbnail).toBe(
+        'http://localhost:9000/pca-bucket/test-thumbnail.jpg',
+      );
+      expect(mockStorageService.deleteFile).toHaveBeenCalledWith(
+        'http://localhost:9000/pca-bucket/test-photo.jpg',
+      );
+      expect(mockStorageService.deleteFile).toHaveBeenCalledWith(
+        'http://localhost:9000/pca-bucket/test-thumbnail.jpg',
+      );
+    });
+
+    it('GET /api/v1/bulletin/:id/history (Audit Logs)', async () => {
+      const response = await request(app.getHttpServer())
+        .get(`/api/v1/bulletin/${createdId}/history`)
+        .expect(200);
+
+      expect(Array.isArray(response.body.data)).toBe(true);
+      expect(response.body.data.length).toBeGreaterThanOrEqual(2);
+      expect(response.body.data[0].action).toBe('UPDATE');
+      expect(response.body.data[1].action).toBe('CREATE');
+    });
+
+    it('DELETE /api/v1/bulletin/:id (Soft Delete)', async () => {
+      await request(app.getHttpServer())
+        .delete(`/api/v1/bulletin/${createdId}`)
+        .expect(200);
+
+      await request(app.getHttpServer())
+        .get(`/api/v1/bulletin/${createdId}`)
+        .expect(404);
+
+      const deletedRecord = await prisma.bulletin.findUnique({
+        where: { id: createdId },
+      });
+      expect(deletedRecord).not.toBeNull();
+      expect(deletedRecord?.deletedAt).toBeInstanceOf(Date);
+
+      const deleteLog = await prisma.auditLog.findFirst({
+        where: {
+          entityName: 'Bulletin',
           entityId: createdId,
           action: 'DELETE',
         },
