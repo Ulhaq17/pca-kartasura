@@ -11,6 +11,7 @@ import { HealthModule } from './health/health.module';
 import { KegiatanModule } from './kegiatan/kegiatan.module';
 import { MajelisLembagaModule } from './majelis-lembaga/majelis-lembaga.module';
 import { PeranModule } from './peran/peran.module';
+import { PengumumanModule } from './pengumuman/pengumuman.module';
 import { ProfilSejarahModule } from './profil-sejarah/profil-sejarah.module';
 import { ProfilStrukturOrganisasiModule } from './profil-struktur-organisasi/profil-struktur-organisasi.module';
 import { ProfilVisiMisiModule } from './profil-visi-misi/profil-visi-misi.module';
@@ -30,6 +31,7 @@ import { ProgramKerjaModule } from './program-kerja/program-kerja.module';
     KegiatanModule,
     MajelisLembagaModule,
     PeranModule,
+    PengumumanModule,
     ProfilSejarahModule,
     ProfilStrukturOrganisasiModule,
     ProfilVisiMisiModule,
