@@ -76,6 +76,8 @@ describe('App (e2e)', () => {
   afterAll(async () => {
     // Cleanup database
     await prisma.auditLog.deleteMany();
+    await prisma.sekolah.deleteMany();
+    await prisma.pantiAsuhan.deleteMany();
     await prisma.buku.deleteMany();
     await prisma.bulletin.deleteMany();
     await prisma.pengumuman.deleteMany();
@@ -880,6 +882,210 @@ describe('App (e2e)', () => {
       const deleteLog = await prisma.auditLog.findFirst({
         where: {
           entityName: 'Buku',
+          entityId: createdId,
+          action: 'DELETE',
+        },
+      });
+      expect(deleteLog).not.toBeNull();
+    });
+  });
+
+  describe('PantiAsuhan (e2e)', () => {
+    let createdId: number;
+
+    it('POST /api/v1/panti-asuhan (Create)', async () => {
+      const response = await request(app.getHttpServer())
+        .post('/api/v1/panti-asuhan')
+        .field('nama', 'Panti Asuhan Aisyiyah Kartasura')
+        .field('deskripsi', 'Layanan pengasuhan dan pendidikan anak.')
+        .field('lokasi', 'Kartasura, Sukoharjo')
+        .attach('foto', Buffer.from('fake-panti-image'), 'panti.jpg')
+        .expect(201);
+
+      expect(response.body.data).toHaveProperty('id');
+      expect(response.body.data.nama).toBe('Panti Asuhan Aisyiyah Kartasura');
+      expect(response.body.data.deskripsi).toBe(
+        'Layanan pengasuhan dan pendidikan anak.',
+      );
+      expect(response.body.data.lokasi).toBe('Kartasura, Sukoharjo');
+      expect(response.body.data.foto).toContain('test-photo.jpg');
+
+      createdId = response.body.data.id;
+    });
+
+    it('GET /api/v1/panti-asuhan (Find All)', async () => {
+      const response = await request(app.getHttpServer())
+        .get('/api/v1/panti-asuhan')
+        .query({ page: 1, limit: 10 })
+        .expect(200);
+
+      expect(Array.isArray(response.body.data)).toBe(true);
+      expect(response.body.data.length).toBeGreaterThan(0);
+      expectPaginationMeta(response.body);
+    });
+
+    it('GET /api/v1/panti-asuhan/:id (Find One)', async () => {
+      const response = await request(app.getHttpServer())
+        .get(`/api/v1/panti-asuhan/${createdId}`)
+        .expect(200);
+
+      expect(response.body.data.id).toBe(createdId);
+    });
+
+    it('PATCH /api/v1/panti-asuhan/:id (Update)', async () => {
+      const response = await request(app.getHttpServer())
+        .patch(`/api/v1/panti-asuhan/${createdId}`)
+        .field('nama', 'Panti Asuhan Aisyiyah Kartasura Baru')
+        .field('lokasi', 'Kartasura Barat')
+        .attach(
+          'foto',
+          Buffer.from('fake-updated-panti-image'),
+          'panti-baru.jpg',
+        )
+        .expect(200);
+
+      expect(response.body.data.id).toBe(createdId);
+      expect(response.body.data.nama).toBe(
+        'Panti Asuhan Aisyiyah Kartasura Baru',
+      );
+      expect(response.body.data.lokasi).toBe('Kartasura Barat');
+      expect(response.body.data.foto).toContain('test-photo.jpg');
+      expect(mockStorageService.deleteFile).toHaveBeenCalledWith(
+        'http://localhost:9000/pca-bucket/test-photo.jpg',
+      );
+    });
+
+    it('GET /api/v1/panti-asuhan/:id/history (Audit Logs)', async () => {
+      const response = await request(app.getHttpServer())
+        .get(`/api/v1/panti-asuhan/${createdId}/history`)
+        .expect(200);
+
+      expect(Array.isArray(response.body.data)).toBe(true);
+      expect(response.body.data.length).toBeGreaterThanOrEqual(2);
+      expect(
+        response.body.data.map((log: { action: string }) => log.action),
+      ).toEqual(expect.arrayContaining(['CREATE', 'UPDATE']));
+    });
+
+    it('DELETE /api/v1/panti-asuhan/:id (Soft Delete)', async () => {
+      await request(app.getHttpServer())
+        .delete(`/api/v1/panti-asuhan/${createdId}`)
+        .expect(200);
+
+      await request(app.getHttpServer())
+        .get(`/api/v1/panti-asuhan/${createdId}`)
+        .expect(404);
+
+      const deletedRecord = await prisma.pantiAsuhan.findUnique({
+        where: { id: createdId },
+      });
+      expect(deletedRecord).not.toBeNull();
+      expect(deletedRecord?.deletedAt).toBeInstanceOf(Date);
+
+      const deleteLog = await prisma.auditLog.findFirst({
+        where: {
+          entityName: 'PantiAsuhan',
+          entityId: createdId,
+          action: 'DELETE',
+        },
+      });
+      expect(deleteLog).not.toBeNull();
+    });
+  });
+
+  describe('Sekolah (e2e)', () => {
+    let createdId: number;
+
+    it('POST /api/v1/sekolah (Create)', async () => {
+      const response = await request(app.getHttpServer())
+        .post('/api/v1/sekolah')
+        .field('nama', 'TK Aisyiyah Kartasura')
+        .field('deskripsi', 'Lembaga pendidikan anak usia dini.')
+        .field('lokasi', 'Kartasura, Sukoharjo')
+        .attach('foto', Buffer.from('fake-sekolah-image'), 'sekolah.jpg')
+        .expect(201);
+
+      expect(response.body.data).toHaveProperty('id');
+      expect(response.body.data.nama).toBe('TK Aisyiyah Kartasura');
+      expect(response.body.data.deskripsi).toBe(
+        'Lembaga pendidikan anak usia dini.',
+      );
+      expect(response.body.data.lokasi).toBe('Kartasura, Sukoharjo');
+      expect(response.body.data.foto).toContain('test-photo.jpg');
+
+      createdId = response.body.data.id;
+    });
+
+    it('GET /api/v1/sekolah (Find All)', async () => {
+      const response = await request(app.getHttpServer())
+        .get('/api/v1/sekolah')
+        .query({ page: 1, limit: 10 })
+        .expect(200);
+
+      expect(Array.isArray(response.body.data)).toBe(true);
+      expect(response.body.data.length).toBeGreaterThan(0);
+      expectPaginationMeta(response.body);
+    });
+
+    it('GET /api/v1/sekolah/:id (Find One)', async () => {
+      const response = await request(app.getHttpServer())
+        .get(`/api/v1/sekolah/${createdId}`)
+        .expect(200);
+
+      expect(response.body.data.id).toBe(createdId);
+    });
+
+    it('PATCH /api/v1/sekolah/:id (Update)', async () => {
+      const response = await request(app.getHttpServer())
+        .patch(`/api/v1/sekolah/${createdId}`)
+        .field('nama', 'TK Aisyiyah Kartasura Baru')
+        .field('lokasi', 'Kartasura Timur')
+        .attach(
+          'foto',
+          Buffer.from('fake-updated-sekolah-image'),
+          'sekolah-baru.jpg',
+        )
+        .expect(200);
+
+      expect(response.body.data.id).toBe(createdId);
+      expect(response.body.data.nama).toBe('TK Aisyiyah Kartasura Baru');
+      expect(response.body.data.lokasi).toBe('Kartasura Timur');
+      expect(response.body.data.foto).toContain('test-photo.jpg');
+      expect(mockStorageService.deleteFile).toHaveBeenCalledWith(
+        'http://localhost:9000/pca-bucket/test-photo.jpg',
+      );
+    });
+
+    it('GET /api/v1/sekolah/:id/history (Audit Logs)', async () => {
+      const response = await request(app.getHttpServer())
+        .get(`/api/v1/sekolah/${createdId}/history`)
+        .expect(200);
+
+      expect(Array.isArray(response.body.data)).toBe(true);
+      expect(response.body.data.length).toBeGreaterThanOrEqual(2);
+      expect(
+        response.body.data.map((log: { action: string }) => log.action),
+      ).toEqual(expect.arrayContaining(['CREATE', 'UPDATE']));
+    });
+
+    it('DELETE /api/v1/sekolah/:id (Soft Delete)', async () => {
+      await request(app.getHttpServer())
+        .delete(`/api/v1/sekolah/${createdId}`)
+        .expect(200);
+
+      await request(app.getHttpServer())
+        .get(`/api/v1/sekolah/${createdId}`)
+        .expect(404);
+
+      const deletedRecord = await prisma.sekolah.findUnique({
+        where: { id: createdId },
+      });
+      expect(deletedRecord).not.toBeNull();
+      expect(deletedRecord?.deletedAt).toBeInstanceOf(Date);
+
+      const deleteLog = await prisma.auditLog.findFirst({
+        where: {
+          entityName: 'Sekolah',
           entityId: createdId,
           action: 'DELETE',
         },

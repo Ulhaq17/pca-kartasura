@@ -159,6 +159,28 @@ model Buku {
   deletedAt DateTime?
 }
 
+model PantiAsuhan {
+  id        Int       @id @default(autoincrement())
+  nama      String
+  foto      String
+  deskripsi String    @db.Text
+  lokasi    String
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+}
+
+model Sekolah {
+  id        Int       @id @default(autoincrement())
+  nama      String
+  foto      String
+  deskripsi String    @db.Text
+  lokasi    String
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+}
+
 model ProgramKerja {
   id               Int            @id @default(autoincrement())
   slug             String         @unique
