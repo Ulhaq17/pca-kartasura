@@ -13,6 +13,7 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { FilesInterceptor } from '@nestjs/platform-express';
+import { ApiFileUpload } from '../shared/decorators/api-file-upload.decorator';
 import { StorageService } from '../storage/storage.service';
 import { CreateKegiatanDto } from './dto/create-kegiatan.dto';
 import { FindKegiatanQueryDto } from './dto/find-kegiatan-query.dto';
@@ -27,6 +28,7 @@ export class KegiatanController {
   ) {}
 
   @Post()
+  @ApiFileUpload({ name: 'foto', isArray: true }, CreateKegiatanDto)
   @UseInterceptors(FilesInterceptor('foto', 4))
   async create(
     @Body() dto: CreateKegiatanDto,
@@ -62,6 +64,10 @@ export class KegiatanController {
   }
 
   @Patch(':id')
+  @ApiFileUpload(
+    { name: 'foto', required: false, isArray: true },
+    UpdateKegiatanDto,
+  )
   @UseInterceptors(FilesInterceptor('foto', 4))
   async update(
     @Param('id', ParseIntPipe) id: number,

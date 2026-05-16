@@ -12,6 +12,7 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { FileFieldsInterceptor } from '@nestjs/platform-express';
+import { ApiFileFieldsUpload } from '../shared/decorators/api-file-upload.decorator';
 import { PaginationQueryDto } from '../shared/dto/pagination-query.dto';
 import { StorageService } from '../storage/storage.service';
 import { CreateMajelisLembagaDto } from './dto/create-majelis-lembaga.dto';
@@ -31,6 +32,13 @@ export class MajelisLembagaController {
   ) {}
 
   @Post()
+  @ApiFileFieldsUpload(
+    [
+      { name: 'fotoKetua', required: false },
+      { name: 'sampulMajelis', required: false },
+    ],
+    CreateMajelisLembagaDto,
+  )
   @UseInterceptors(
     FileFieldsInterceptor([
       { name: 'fotoKetua', maxCount: 1 },
@@ -70,6 +78,13 @@ export class MajelisLembagaController {
   }
 
   @Patch(':id')
+  @ApiFileFieldsUpload(
+    [
+      { name: 'fotoKetua', required: false },
+      { name: 'sampulMajelis', required: false },
+    ],
+    UpdateMajelisLembagaDto,
+  )
   @UseInterceptors(
     FileFieldsInterceptor([
       { name: 'fotoKetua', maxCount: 1 },

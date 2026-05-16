@@ -9,6 +9,7 @@ import {
   FileTypeValidator,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { ApiFileUpload } from '../shared/decorators/api-file-upload.decorator';
 import { MinioService } from '../minio/minio.service';
 import sharp from 'sharp';
 import { v4 as uuidv4 } from 'uuid';
@@ -19,6 +20,7 @@ export class UploadController {
   constructor(private readonly minioService: MinioService) {}
 
   @Post()
+  @ApiFileUpload({ name: 'file' })
   @UseInterceptors(FileInterceptor('file'))
   async uploadFile(
     @UploadedFile(
@@ -55,7 +57,9 @@ export class UploadController {
         size: compressedBuffer.length,
       };
     } catch (error) {
-      throw new BadRequestException(`Upload failed: ${error instanceof Error ? error.message : String(error)}`);
+      throw new BadRequestException(
+        `Upload failed: ${error instanceof Error ? error.message : String(error)}`,
+      );
     }
   }
 }

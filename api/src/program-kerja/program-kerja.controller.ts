@@ -13,6 +13,7 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { ApiFileUpload } from '../shared/decorators/api-file-upload.decorator';
 import { StorageService } from '../storage/storage.service';
 import { CreateProgramKerjaDto } from './dto/create-program-kerja.dto';
 import { FindProgramKerjaQueryDto } from './dto/find-program-kerja-query.dto';
@@ -27,6 +28,7 @@ export class ProgramKerjaController {
   ) {}
 
   @Post()
+  @ApiFileUpload({ name: 'foto' }, CreateProgramKerjaDto)
   @UseInterceptors(FileInterceptor('foto'))
   async create(
     @Body() dto: CreateProgramKerjaDto,
@@ -56,6 +58,7 @@ export class ProgramKerjaController {
   }
 
   @Patch(':id')
+  @ApiFileUpload({ name: 'foto', required: false }, UpdateProgramKerjaDto)
   @UseInterceptors(FileInterceptor('foto'))
   async update(
     @Param('id', ParseIntPipe) id: number,

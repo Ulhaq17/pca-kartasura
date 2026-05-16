@@ -12,6 +12,7 @@ import {
   Query,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { ApiFileUpload } from '../shared/decorators/api-file-upload.decorator';
 import { ProfilSejarahService } from './profil-sejarah.service';
 import { StorageService } from '../storage/storage.service';
 import { PaginationQueryDto } from '../shared/dto/pagination-query.dto';
@@ -26,6 +27,7 @@ export class ProfilSejarahController {
   ) {}
 
   @Post()
+  @ApiFileUpload({ name: 'foto', required: false }, CreateProfilSejarahDto)
   @UseInterceptors(FileInterceptor('foto'))
   async create(
     @Body() dto: CreateProfilSejarahDto,
@@ -48,6 +50,7 @@ export class ProfilSejarahController {
   }
 
   @Patch(':id')
+  @ApiFileUpload({ name: 'foto', required: false }, UpdateProfilSejarahDto)
   @UseInterceptors(FileInterceptor('foto'))
   async update(
     @Param('id', ParseIntPipe) id: number,

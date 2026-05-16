@@ -13,6 +13,7 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { ApiFileUpload } from '../shared/decorators/api-file-upload.decorator';
 import { PaginationQueryDto } from '../shared/dto/pagination-query.dto';
 import { StorageService } from '../storage/storage.service';
 import { CreateProfilStrukturOrganisasiDto } from './dto/create-profil-struktur-organisasi.dto';
@@ -27,6 +28,7 @@ export class ProfilStrukturOrganisasiController {
   ) {}
 
   @Post()
+  @ApiFileUpload({ name: 'foto' }, CreateProfilStrukturOrganisasiDto)
   @UseInterceptors(FileInterceptor('foto'))
   async create(
     @Body() dto: CreateProfilStrukturOrganisasiDto,
@@ -51,6 +53,7 @@ export class ProfilStrukturOrganisasiController {
   }
 
   @Patch(':id')
+  @ApiFileUpload({ name: 'foto' }, UpdateProfilStrukturOrganisasiDto)
   @UseInterceptors(FileInterceptor('foto'))
   async update(
     @Param('id', ParseIntPipe) id: number,

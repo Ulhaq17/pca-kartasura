@@ -3,6 +3,7 @@ import { AppModule } from './app.module';
 import { ClassSerializerInterceptor, ValidationPipe } from '@nestjs/common';
 import { TransformInterceptor } from './shared/interceptors/transform.interceptor';
 import { GlobalExceptionFilter } from './shared/filters/global-exception.filter';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -27,6 +28,16 @@ async function bootstrap() {
     new ClassSerializerInterceptor(app.get(Reflector)),
     new TransformInterceptor(),
   );
+
+  const swaggerConfig = new DocumentBuilder()
+    .setTitle('PCA Kartasura API')
+    .setDescription('Dokumentasi API PCA Kartasura')
+    .setVersion('1.0')
+    .build();
+  const swaggerDocument = SwaggerModule.createDocument(app, swaggerConfig);
+  SwaggerModule.setup('docs', app, swaggerDocument, {
+    useGlobalPrefix: true,
+  });
 
   await app.listen(process.env.PORT ?? 3001);
 }

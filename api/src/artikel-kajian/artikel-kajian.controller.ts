@@ -13,6 +13,7 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { ApiFileUpload } from '../shared/decorators/api-file-upload.decorator';
 import { PaginationQueryDto } from '../shared/dto/pagination-query.dto';
 import { StorageService } from '../storage/storage.service';
 import { ArtikelKajianService } from './artikel-kajian.service';
@@ -27,6 +28,7 @@ export class ArtikelKajianController {
   ) {}
 
   @Post()
+  @ApiFileUpload({ name: 'sampul' }, CreateArtikelKajianDto)
   @UseInterceptors(FileInterceptor('sampul'))
   async create(
     @Body() dto: CreateArtikelKajianDto,
@@ -56,6 +58,7 @@ export class ArtikelKajianController {
   }
 
   @Patch(':id')
+  @ApiFileUpload({ name: 'sampul', required: false }, UpdateArtikelKajianDto)
   @UseInterceptors(FileInterceptor('sampul'))
   async update(
     @Param('id', ParseIntPipe) id: number,
