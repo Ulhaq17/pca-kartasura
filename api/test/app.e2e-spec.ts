@@ -69,6 +69,8 @@ describe('App (e2e)', () => {
   afterAll(async () => {
     // Cleanup database
     await prisma.auditLog.deleteMany();
+    await prisma.anggota.deleteMany();
+    await prisma.peran.deleteMany();
     await prisma.artikelKajian.deleteMany();
     await prisma.artikelKegiatan.deleteMany();
     await prisma.kegiatan.deleteMany();
@@ -231,6 +233,202 @@ describe('App (e2e)', () => {
         },
       });
       expect(deleteLog).not.toBeNull();
+    });
+  });
+
+  describe('Peran dan Anggota (e2e)', () => {
+    const uniqueSuffix = Date.now();
+    const email = `anggota-${uniqueSuffix}@example.com`;
+    let peranId: number;
+    let majelisLembagaId: number;
+    let anggotaId: number;
+
+    beforeAll(async () => {
+      const majelis = await request(app.getHttpServer())
+        .post('/api/v1/majelis-lembaga')
+        .field('nama', `Majelis Anggota ${uniqueSuffix}`)
+        .field('deskripsi', 'Majelis untuk pengujian anggota.')
+        .field('namaKetua', 'Nur Aisyah')
+        .field('bioKetua', 'Aktif dalam pembinaan anggota.')
+        .expect(201);
+
+      majelisLembagaId = majelis.body.data.id;
+    });
+
+    it('POST /api/v1/peran (Create)', async () => {
+      const response = await request(app.getHttpServer())
+        .post('/api/v1/peran')
+        .send({
+          nama: `Sekretaris ${uniqueSuffix}`,
+          keterangan: 'Mengelola administrasi organisasi.',
+        })
+        .expect(201);
+
+      expect(response.body.data).toHaveProperty('id');
+      expect(response.body.data.nama).toBe(`Sekretaris ${uniqueSuffix}`);
+      expect(response.body.data.keterangan).toBe(
+        'Mengelola administrasi organisasi.',
+      );
+
+      peranId = response.body.data.id;
+    });
+
+    it('GET /api/v1/peran (Find All)', async () => {
+      const response = await request(app.getHttpServer())
+        .get('/api/v1/peran')
+        .query({ page: 1, limit: 10 })
+        .expect(200);
+
+      expect(Array.isArray(response.body.data)).toBe(true);
+      expect(response.body.data.length).toBeGreaterThan(0);
+      expectPaginationMeta(response.body);
+    });
+
+    it('PATCH /api/v1/peran/:id (Update)', async () => {
+      const response = await request(app.getHttpServer())
+        .patch(`/api/v1/peran/${peranId}`)
+        .send({ keterangan: 'Mengelola administrasi dan notulensi.' })
+        .expect(200);
+
+      expect(response.body.data.id).toBe(peranId);
+      expect(response.body.data.keterangan).toBe(
+        'Mengelola administrasi dan notulensi.',
+      );
+    });
+
+    it('POST /api/v1/anggota (Create)', async () => {
+      const response = await request(app.getHttpServer())
+        .post('/api/v1/anggota')
+        .send({
+          nama: 'Aulia Rahma',
+          email,
+          peranId,
+          majelisLembagaId,
+        })
+        .expect(201);
+
+      expect(response.body.data).toHaveProperty('id');
+      expect(response.body.data.nama).toBe('Aulia Rahma');
+      expect(response.body.data.email).toBe(email);
+      expect(response.body.data.peran.id).toBe(peranId);
+      expect(response.body.data.majelisLembaga.id).toBe(majelisLembagaId);
+
+      anggotaId = response.body.data.id;
+    });
+
+    it('POST /api/v1/anggota (Duplicate Email)', async () => {
+      await request(app.getHttpServer())
+        .post('/api/v1/anggota')
+        .send({
+          nama: 'Anggota Duplikat',
+          email,
+          peranId,
+          majelisLembagaId,
+        })
+        .expect(409);
+    });
+
+    it('GET /api/v1/anggota (Find All)', async () => {
+      const response = await request(app.getHttpServer())
+        .get('/api/v1/anggota')
+        .query({ page: 1, limit: 10 })
+        .expect(200);
+
+      expect(Array.isArray(response.body.data)).toBe(true);
+      expect(response.body.data.length).toBeGreaterThan(0);
+      expect(response.body.data[0]).toHaveProperty('peran');
+      expect(response.body.data[0]).toHaveProperty('majelisLembaga');
+      expectPaginationMeta(response.body);
+    });
+
+    it('GET /api/v1/anggota/:id (Find One)', async () => {
+      const response = await request(app.getHttpServer())
+        .get(`/api/v1/anggota/${anggotaId}`)
+        .expect(200);
+
+      expect(response.body.data.id).toBe(anggotaId);
+      expect(response.body.data.peran.id).toBe(peranId);
+      expect(response.body.data.majelisLembaga.id).toBe(majelisLembagaId);
+    });
+
+    it('PATCH /api/v1/anggota/:id (Update)', async () => {
+      const response = await request(app.getHttpServer())
+        .patch(`/api/v1/anggota/${anggotaId}`)
+        .send({ nama: 'Aulia Rahma Putri' })
+        .expect(200);
+
+      expect(response.body.data.id).toBe(anggotaId);
+      expect(response.body.data.nama).toBe('Aulia Rahma Putri');
+    });
+
+    it('GET /api/v1/anggota/:id/history (Audit Logs)', async () => {
+      const response = await request(app.getHttpServer())
+        .get(`/api/v1/anggota/${anggotaId}/history`)
+        .expect(200);
+
+      expect(Array.isArray(response.body.data)).toBe(true);
+      expect(response.body.data.length).toBeGreaterThanOrEqual(2);
+      expect(response.body.data[0].action).toBe('UPDATE');
+      expect(response.body.data[1].action).toBe('CREATE');
+    });
+
+    it('DELETE /api/v1/peran/:id (Reject In Use)', async () => {
+      const response = await request(app.getHttpServer())
+        .delete(`/api/v1/peran/${peranId}`)
+        .expect(409);
+
+      expect(response.body.message).toBe(
+        'Peran tidak dapat dihapus karena masih digunakan oleh anggota',
+      );
+
+      const existingRecord = await prisma.peran.findUnique({
+        where: { id: peranId },
+      });
+      expect(existingRecord).not.toBeNull();
+      expect(existingRecord?.deletedAt).toBeNull();
+    });
+
+    it('DELETE /api/v1/anggota/:id (Soft Delete)', async () => {
+      await request(app.getHttpServer())
+        .delete(`/api/v1/anggota/${anggotaId}`)
+        .expect(200);
+
+      await request(app.getHttpServer())
+        .get(`/api/v1/anggota/${anggotaId}`)
+        .expect(404);
+
+      const deletedRecord = await prisma.anggota.findUnique({
+        where: { id: anggotaId },
+      });
+      expect(deletedRecord).not.toBeNull();
+      expect(deletedRecord?.deletedAt).toBeInstanceOf(Date);
+    });
+
+    it('GET /api/v1/peran/:id/history (Audit Logs)', async () => {
+      const response = await request(app.getHttpServer())
+        .get(`/api/v1/peran/${peranId}/history`)
+        .expect(200);
+
+      expect(Array.isArray(response.body.data)).toBe(true);
+      expect(response.body.data.length).toBeGreaterThanOrEqual(2);
+      expect(response.body.data[0].action).toBe('UPDATE');
+      expect(response.body.data[1].action).toBe('CREATE');
+    });
+
+    it('DELETE /api/v1/peran/:id (Soft Delete)', async () => {
+      await request(app.getHttpServer())
+        .delete(`/api/v1/peran/${peranId}`)
+        .expect(200);
+
+      await request(app.getHttpServer())
+        .get(`/api/v1/peran/${peranId}`)
+        .expect(404);
+
+      const deletedRecord = await prisma.peran.findUnique({
+        where: { id: peranId },
+      });
+      expect(deletedRecord).not.toBeNull();
+      expect(deletedRecord?.deletedAt).toBeInstanceOf(Date);
     });
   });
 

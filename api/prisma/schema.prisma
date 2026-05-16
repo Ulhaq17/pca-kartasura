@@ -49,11 +49,35 @@ model MajelisLembaga {
   fotoKetua     String?
   sampulMajelis String?
   videoProfil   String?
+  anggota       Anggota[]
   artikelKegiatan ArtikelKegiatan[]
   programKerja  ProgramKerja[]
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
   deletedAt     DateTime?
+}
+
+model Peran {
+  id         Int       @id @default(autoincrement())
+  nama       String    @unique
+  keterangan String?   @db.Text
+  anggota    Anggota[]
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  deletedAt  DateTime?
+}
+
+model Anggota {
+  id               Int            @id @default(autoincrement())
+  nama             String
+  email            String         @unique
+  peranId          Int
+  peran            Peran          @relation(fields: [peranId], references: [id])
+  majelisLembagaId Int
+  majelisLembaga   MajelisLembaga @relation(fields: [majelisLembagaId], references: [id])
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  deletedAt        DateTime?
 }
 
 model ArtikelKegiatan {
