@@ -14,47 +14,64 @@ datasource db {
 }
 
 model ProfilSejarah {
-  id        Int      @id @default(autoincrement())
+  id        Int       @id @default(autoincrement())
   foto      String?
-  konten    String   @db.Text
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  konten    String    @db.Text
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
   deletedAt DateTime?
 }
 
 model ProfilVisiMisi {
-  id        Int      @id @default(autoincrement())
-  visi      String   @db.Text
-  misi      String   @db.Text
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id        Int       @id @default(autoincrement())
+  visi      String    @db.Text
+  misi      String    @db.Text
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
   deletedAt DateTime?
 }
 
 model ProfilStrukturOrganisasi {
-  id        Int      @id @default(autoincrement())
+  id        Int       @id @default(autoincrement())
   foto      String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
   deletedAt DateTime?
 }
 
 model MajelisLembaga {
-  id            Int      @id @default(autoincrement())
-  slug          String   @unique
-  nama          String
-  deskripsi     String   @db.Text
-  namaKetua     String
-  bioKetua      String   @db.Text
-  fotoKetua     String?
-  sampulMajelis String?
-  videoProfil   String?
-  anggota       Anggota[]
+  id              Int               @id @default(autoincrement())
+  slug            String            @unique
+  nama            String
+  deskripsi       String            @db.Text
+  namaKetua       String
+  bioKetua        String            @db.Text
+  fotoKetua       String?
+  sampulMajelis   String?
+  videoProfil     String?
+  anggota         Anggota[]
+  agenda          Agenda[]
   artikelKegiatan ArtikelKegiatan[]
-  programKerja  ProgramKerja[]
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  deletedAt     DateTime?
+  programKerja    ProgramKerja[]
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  deletedAt       DateTime?
+}
+
+model Agenda {
+  id             Int            @id @default(autoincrement())
+  slug           String         @unique
+  judul          String
+  deskripsi      String         @db.Text
+  tanggal        DateTime       @db.Date
+  waktuMulai     DateTime
+  waktuSelesai   DateTime
+  tempat         String
+  majelisId      Int
+  majelisLembaga MajelisLembaga @relation(fields: [majelisId], references: [id])
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  deletedAt      DateTime?
 }
 
 model Peran {
@@ -96,15 +113,15 @@ model ArtikelKegiatan {
 }
 
 model ArtikelKajian {
-  id        Int      @id @default(autoincrement())
-  slug      String   @unique
+  id        Int       @id @default(autoincrement())
+  slug      String    @unique
   judul     String
   tanggal   DateTime
   penulis   String
-  deskripsi String   @db.Text
+  deskripsi String    @db.Text
   sampul    String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
   deletedAt DateTime?
 }
 

@@ -69,6 +69,7 @@ describe('App (e2e)', () => {
   afterAll(async () => {
     // Cleanup database
     await prisma.auditLog.deleteMany();
+    await prisma.agenda.deleteMany();
     await prisma.anggota.deleteMany();
     await prisma.peran.deleteMany();
     await prisma.artikelKajian.deleteMany();
@@ -426,6 +427,135 @@ describe('App (e2e)', () => {
 
       const deletedRecord = await prisma.peran.findUnique({
         where: { id: peranId },
+      });
+      expect(deletedRecord).not.toBeNull();
+      expect(deletedRecord?.deletedAt).toBeInstanceOf(Date);
+    });
+  });
+
+  describe('Agenda (e2e)', () => {
+    let majelisId: number;
+    let createdId: number;
+    let createdSlug: string;
+
+    beforeAll(async () => {
+      const majelis = await request(app.getHttpServer())
+        .post('/api/v1/majelis-lembaga')
+        .field('nama', 'Majelis Agenda')
+        .field('deskripsi', 'Mengelola agenda organisasi.')
+        .field('namaKetua', 'Khadijah')
+        .field('bioKetua', 'Aktif dalam koordinasi agenda.')
+        .expect(201);
+
+      majelisId = majelis.body.data.id;
+    });
+
+    it('POST /api/v1/agenda (Create)', async () => {
+      const response = await request(app.getHttpServer())
+        .post('/api/v1/agenda')
+        .send({
+          judul: 'Rapat Koordinasi Majelis',
+          deskripsi: 'Agenda koordinasi lintas bidang majelis.',
+          tanggal: '2026-06-10',
+          waktuMulai: '2026-06-10T08:00:00.000Z',
+          waktuSelesai: '2026-06-10T10:00:00.000Z',
+          tempat: 'Aula PCA Kartasura',
+          majelisId,
+        })
+        .expect(201);
+
+      expect(response.body.data).toHaveProperty('id');
+      expect(response.body.data.slug).toBe('rapat-koordinasi-majelis');
+      expect(response.body.data.judul).toBe('Rapat Koordinasi Majelis');
+      expect(response.body.data.tempat).toBe('Aula PCA Kartasura');
+      expect(response.body.data.majelisId).toBe(majelisId);
+      expect(response.body.data.majelisLembaga.id).toBe(majelisId);
+
+      createdId = response.body.data.id;
+      createdSlug = response.body.data.slug;
+    });
+
+    it('GET /api/v1/agenda (Find All with Filters)', async () => {
+      const response = await request(app.getHttpServer())
+        .get('/api/v1/agenda')
+        .query({
+          page: 1,
+          limit: 10,
+          majelisId,
+          startDate: '2026-06-01',
+          endDate: '2026-06-30',
+        })
+        .expect(200);
+
+      expect(Array.isArray(response.body.data)).toBe(true);
+      expect(response.body.data.length).toBeGreaterThan(0);
+      expect(response.body.data[0].majelisId).toBe(majelisId);
+      expect(response.body.data[0].tanggal).toContain('2026-06-10');
+      expectPaginationMeta(response.body);
+    });
+
+    it('GET /api/v1/agenda/:id (Find One)', async () => {
+      const response = await request(app.getHttpServer())
+        .get(`/api/v1/agenda/${createdId}`)
+        .expect(200);
+
+      expect(response.body.data.id).toBe(createdId);
+      expect(response.body.data.slug).toBe(createdSlug);
+      expect(response.body.data.majelisLembaga.id).toBe(majelisId);
+    });
+
+    it('GET /api/v1/agenda/slug/:slug (Find By Slug)', async () => {
+      const response = await request(app.getHttpServer())
+        .get(`/api/v1/agenda/slug/${createdSlug}`)
+        .expect(200);
+
+      expect(response.body.data.id).toBe(createdId);
+      expect(response.body.data.slug).toBe(createdSlug);
+    });
+
+    it('PATCH /api/v1/agenda/:id (Update)', async () => {
+      const response = await request(app.getHttpServer())
+        .patch(`/api/v1/agenda/${createdId}`)
+        .send({
+          judul: 'Rapat Koordinasi Bulanan Majelis',
+          tempat: 'Ruang Pertemuan PCA Kartasura',
+        })
+        .expect(200);
+
+      expect(response.body.data.id).toBe(createdId);
+      expect(response.body.data.judul).toBe('Rapat Koordinasi Bulanan Majelis');
+      expect(response.body.data.slug).toBe('rapat-koordinasi-bulanan-majelis');
+      expect(response.body.data.tempat).toBe('Ruang Pertemuan PCA Kartasura');
+
+      createdSlug = response.body.data.slug;
+    });
+
+    it('GET /api/v1/agenda/:id/history (Audit Logs)', async () => {
+      const response = await request(app.getHttpServer())
+        .get(`/api/v1/agenda/${createdId}/history`)
+        .expect(200);
+
+      expect(Array.isArray(response.body.data)).toBe(true);
+      expect(response.body.data.length).toBeGreaterThanOrEqual(2);
+      expect(response.body.data[0].action).toBe('UPDATE');
+      expect(response.body.data[1].action).toBe('CREATE');
+    });
+
+    it('DELETE /api/v1/agenda/:id (Soft Delete)', async () => {
+      await request(app.getHttpServer())
+        .delete(`/api/v1/agenda/${createdId}`)
+        .expect(200);
+
+      await request(app.getHttpServer())
+        .get(`/api/v1/agenda/${createdId}`)
+        .expect(404);
+
+      await request(app.getHttpServer())
+        .get(`/api/v1/agenda/slug/${createdSlug}`)
+        .expect(404);
+
+      const deletedRecord = await prisma.agenda.findUnique({
+        where: { id: createdId },
       });
       expect(deletedRecord).not.toBeNull();
       expect(deletedRecord?.deletedAt).toBeInstanceOf(Date);

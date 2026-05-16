@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { AgendaModule } from './agenda/agenda.module';
 import { AnggotaModule } from './anggota/anggota.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -20,6 +21,7 @@ import { ProgramKerjaModule } from './program-kerja/program-kerja.module';
     ConfigModule.forRoot({
       isGlobal: true,
     }),
+    AgendaModule,
     AnggotaModule,
     ArtikelKajianModule,
     ArtikelKegiatanModule,
