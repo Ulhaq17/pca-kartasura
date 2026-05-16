@@ -69,6 +69,7 @@ describe('App (e2e)', () => {
   afterAll(async () => {
     // Cleanup database
     await prisma.auditLog.deleteMany();
+    await prisma.artikelKajian.deleteMany();
     await prisma.artikelKegiatan.deleteMany();
     await prisma.kegiatan.deleteMany();
     await prisma.programKerja.deleteMany();
@@ -636,6 +637,123 @@ describe('App (e2e)', () => {
       const deleteLog = await prisma.auditLog.findFirst({
         where: {
           entityName: 'ArtikelKegiatan',
+          entityId: createdId,
+          action: 'DELETE',
+        },
+      });
+      expect(deleteLog).not.toBeNull();
+    });
+  });
+
+  describe('ArtikelKajian (e2e)', () => {
+    let createdId: number;
+    let createdSlug: string;
+
+    it('POST /api/v1/artikel-kajian (Create)', async () => {
+      const response = await request(app.getHttpServer())
+        .post('/api/v1/artikel-kajian')
+        .field('judul', 'Kajian Tafsir Surat Al-Fatihah')
+        .field('tanggal', '2026-05-15T09:00:00.000Z')
+        .field('penulis', 'Admin PCA Kartasura')
+        .field('deskripsi', 'Artikel kajian tafsir surat Al-Fatihah.')
+        .attach('sampul', Buffer.from('fake-kajian-cover'), 'kajian.jpg')
+        .expect(201);
+
+      expect(response.body.data).toHaveProperty('id');
+      expect(response.body.data.slug).toBe('kajian-tafsir-surat-al-fatihah');
+      expect(response.body.data.judul).toBe('Kajian Tafsir Surat Al-Fatihah');
+      expect(response.body.data.penulis).toBe('Admin PCA Kartasura');
+      expect(response.body.data.sampul).toContain('test-photo.jpg');
+
+      createdId = response.body.data.id;
+      createdSlug = response.body.data.slug;
+    });
+
+    it('GET /api/v1/artikel-kajian (Find All)', async () => {
+      const response = await request(app.getHttpServer())
+        .get('/api/v1/artikel-kajian')
+        .query({ page: 1, limit: 10 })
+        .expect(200);
+
+      expect(Array.isArray(response.body.data)).toBe(true);
+      expect(response.body.data.length).toBeGreaterThan(0);
+      expectPaginationMeta(response.body);
+    });
+
+    it('GET /api/v1/artikel-kajian/:id (Find One)', async () => {
+      const response = await request(app.getHttpServer())
+        .get(`/api/v1/artikel-kajian/${createdId}`)
+        .expect(200);
+
+      expect(response.body.data.id).toBe(createdId);
+      expect(response.body.data.slug).toBe(createdSlug);
+    });
+
+    it('GET /api/v1/artikel-kajian/slug/:slug (Find By Slug)', async () => {
+      const response = await request(app.getHttpServer())
+        .get(`/api/v1/artikel-kajian/slug/${createdSlug}`)
+        .expect(200);
+
+      expect(response.body.data.id).toBe(createdId);
+      expect(response.body.data.slug).toBe(createdSlug);
+    });
+
+    it('PATCH /api/v1/artikel-kajian/:id (Update)', async () => {
+      const response = await request(app.getHttpServer())
+        .patch(`/api/v1/artikel-kajian/${createdId}`)
+        .field('judul', 'Kajian Tafsir Surat Al-Fatihah Berkemajuan')
+        .field('deskripsi', 'Artikel kajian yang sudah diperbarui.')
+        .attach('sampul', Buffer.from('fake-updated-kajian-cover'), 'kajian-baru.jpg')
+        .expect(200);
+
+      expect(response.body.data.id).toBe(createdId);
+      expect(response.body.data.slug).toBe(
+        'kajian-tafsir-surat-al-fatihah-berkemajuan',
+      );
+      expect(response.body.data.deskripsi).toBe(
+        'Artikel kajian yang sudah diperbarui.',
+      );
+      expect(response.body.data.sampul).toContain('test-photo.jpg');
+      expect(mockStorageService.deleteFile).toHaveBeenCalledWith(
+        'http://localhost:9000/pca-bucket/test-photo.jpg',
+      );
+
+      createdSlug = response.body.data.slug;
+    });
+
+    it('GET /api/v1/artikel-kajian/:id/history (Audit Logs)', async () => {
+      const response = await request(app.getHttpServer())
+        .get(`/api/v1/artikel-kajian/${createdId}/history`)
+        .expect(200);
+
+      expect(Array.isArray(response.body.data)).toBe(true);
+      expect(response.body.data.length).toBeGreaterThanOrEqual(2);
+      expect(response.body.data[0].action).toBe('UPDATE');
+      expect(response.body.data[1].action).toBe('CREATE');
+    });
+
+    it('DELETE /api/v1/artikel-kajian/:id (Soft Delete)', async () => {
+      await request(app.getHttpServer())
+        .delete(`/api/v1/artikel-kajian/${createdId}`)
+        .expect(200);
+
+      await request(app.getHttpServer())
+        .get(`/api/v1/artikel-kajian/${createdId}`)
+        .expect(404);
+
+      await request(app.getHttpServer())
+        .get(`/api/v1/artikel-kajian/slug/${createdSlug}`)
+        .expect(404);
+
+      const deletedRecord = await prisma.artikelKajian.findUnique({
+        where: { id: createdId },
+      });
+      expect(deletedRecord).not.toBeNull();
+      expect(deletedRecord?.deletedAt).toBeInstanceOf(Date);
+
+      const deleteLog = await prisma.auditLog.findFirst({
+        where: {
+          entityName: 'ArtikelKajian',
           entityId: createdId,
           action: 'DELETE',
         },
