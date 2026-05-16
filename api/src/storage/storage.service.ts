@@ -24,7 +24,7 @@ export class StorageService implements OnModuleInit {
     if (!exists) {
       await this.minioClient.makeBucket(this.bucketName);
       this.logger.log(`Bucket ${this.bucketName} created.`);
-      
+
       // Set bucket policy to public read if needed for easy access
       const policy = {
         Version: '2012-10-17',
@@ -37,7 +37,10 @@ export class StorageService implements OnModuleInit {
           },
         ],
       };
-      await this.minioClient.setBucketPolicy(this.bucketName, JSON.stringify(policy));
+      await this.minioClient.setBucketPolicy(
+        this.bucketName,
+        JSON.stringify(policy),
+      );
     }
   }
 
@@ -52,7 +55,27 @@ export class StorageService implements OnModuleInit {
         'Content-Type': file.mimetype,
       },
     );
-    
+
+    const publicUrl = this.configService.get<string>('MINIO_PUBLIC_URL');
+    return `${publicUrl}/${this.bucketName}/${fileName}`;
+  }
+
+  async uploadBuffer(
+    buffer: Buffer,
+    originalName: string,
+    mimetype: string,
+  ): Promise<string> {
+    const fileName = `${Date.now()}-${originalName.replace(/\s/g, '-')}`;
+    await this.minioClient.putObject(
+      this.bucketName,
+      fileName,
+      buffer,
+      buffer.length,
+      {
+        'Content-Type': mimetype,
+      },
+    );
+
     const publicUrl = this.configService.get<string>('MINIO_PUBLIC_URL');
     return `${publicUrl}/${this.bucketName}/${fileName}`;
   }
@@ -64,7 +87,9 @@ export class StorageService implements OnModuleInit {
         await this.minioClient.removeObject(this.bucketName, fileName);
       }
     } catch (error) {
-      this.logger.error(`Failed to delete file: ${fileUrl} ${error instanceof Error ? error.message : String(error)}`);
+      this.logger.error(
+        `Failed to delete file: ${fileUrl} ${error instanceof Error ? error.message : String(error)}`,
+      );
       throw error;
     }
   }

@@ -8,12 +8,4 @@ export class CreatePengumumanDto {
   @IsNotEmpty()
   @IsDateString()
   tanggal: string;
-
-  @IsNotEmpty()
-  @IsString()
-  file: string;
-
-  @IsNotEmpty()
-  @IsString()
-  thumbnail: string;
 }

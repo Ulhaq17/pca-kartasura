@@ -16,7 +16,10 @@ export class MinioService {
       accessKey: this.configService.get<string>('MINIO_ACCESS_KEY'),
       secretKey: this.configService.get<string>('MINIO_SECRET_KEY'),
     });
-    this.bucketName = this.configService.get<string>('MINIO_BUCKET', 'pca-bucket');
+    this.bucketName = this.configService.get<string>(
+      'MINIO_BUCKET',
+      'pca-bucket',
+    );
   }
 
   async uploadFile(
@@ -39,7 +42,9 @@ export class MinioService {
       );
       return `${publicUrl}/${this.bucketName}/${fileName}`;
     } catch (error) {
-      this.logger.error(`Error uploading file to MinIO: ${error instanceof Error ? error.message : String(error)}`);
+      this.logger.error(
+        `Error uploading file to MinIO: ${error instanceof Error ? error.message : String(error)}`,
+      );
       throw error;
     }
   }
@@ -48,7 +53,9 @@ export class MinioService {
     try {
       await this.minioClient.removeObject(this.bucketName, fileName);
     } catch (error) {
-      this.logger.error(`Error deleting file from MinIO: ${error instanceof Error ? error.message : String(error)}`);
+      this.logger.error(
+        `Error deleting file from MinIO: ${error instanceof Error ? error.message : String(error)}`,
+      );
       throw error;
     }
   }

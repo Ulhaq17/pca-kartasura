@@ -8,12 +8,4 @@ export class UpdatePengumumanDto {
   @IsOptional()
   @IsDateString()
   tanggal?: string;
-
-  @IsOptional()
-  @IsString()
-  file?: string;
-
-  @IsOptional()
-  @IsString()
-  thumbnail?: string;
 }

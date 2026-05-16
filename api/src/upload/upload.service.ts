@@ -39,7 +39,9 @@ export class UploadService {
     };
   }
 
-  private async uploadPdf(file: Express.Multer.File): Promise<UploadResponseDto> {
+  private async uploadPdf(
+    file: Express.Multer.File,
+  ): Promise<UploadResponseDto> {
     const pdfFileName = `${uuidv4()}.pdf`;
     const thumbnailFileName = `${uuidv4()}-thumb.webp`;
 
@@ -64,7 +66,9 @@ export class UploadService {
     };
   }
 
-  private async createPdfFirstPageThumbnail(pdfBuffer: Buffer): Promise<Buffer> {
+  private async createPdfFirstPageThumbnail(
+    pdfBuffer: Buffer,
+  ): Promise<Buffer> {
     try {
       const [{ getDocument }, { createCanvas }] = await Promise.all([
         import('pdfjs-dist/legacy/build/pdf.mjs'),

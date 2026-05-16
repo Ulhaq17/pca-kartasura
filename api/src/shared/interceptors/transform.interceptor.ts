@@ -6,7 +6,10 @@ import {
 } from '@nestjs/common';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
-import { isPaginatedResult, PaginationMeta } from '../pagination/paginated-result';
+import {
+  isPaginatedResult,
+  PaginationMeta,
+} from '../pagination/paginated-result';
 
 export interface Response<T> {
   data: T;
@@ -18,9 +21,10 @@ export interface Response<T> {
 }
 
 @Injectable()
-export class TransformInterceptor<T>
-  implements NestInterceptor<T, Response<T>>
-{
+export class TransformInterceptor<T> implements NestInterceptor<
+  T,
+  Response<T>
+> {
   intercept(
     context: ExecutionContext,
     next: CallHandler,
@@ -31,9 +35,7 @@ export class TransformInterceptor<T>
         const meta = {
           timestamp: new Date().toISOString(),
           path: request.url,
-          ...(isPaginatedResult(data)
-            ? { pagination: data.pagination }
-            : {}),
+          ...(isPaginatedResult(data) ? { pagination: data.pagination } : {}),
         };
 
         return {

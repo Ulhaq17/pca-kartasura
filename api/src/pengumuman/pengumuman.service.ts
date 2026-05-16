@@ -18,13 +18,13 @@ export class PengumumanService {
     private auditService: AuditService,
   ) {}
 
-  async create(dto: CreatePengumumanDto) {
+  async create(dto: CreatePengumumanDto, file: string, thumbnail: string) {
     const data = await this.prisma.pengumuman.create({
       data: {
         judul: dto.judul,
         tanggal: new Date(dto.tanggal),
-        file: dto.file,
-        thumbnail: dto.thumbnail,
+        file,
+        thumbnail,
       },
     });
 
@@ -61,15 +61,20 @@ export class PengumumanService {
     return data;
   }
 
-  async update(id: number, dto: UpdatePengumumanDto) {
+  async update(
+    id: number,
+    dto: UpdatePengumumanDto,
+    file?: string,
+    thumbnail?: string,
+  ) {
     const existing = await this.findOne(id);
     const data = await this.prisma.pengumuman.update({
       where: { id },
       data: {
         ...(dto.judul ? { judul: dto.judul } : {}),
         ...(dto.tanggal ? { tanggal: new Date(dto.tanggal) } : {}),
-        ...(dto.file ? { file: dto.file } : {}),
-        ...(dto.thumbnail ? { thumbnail: dto.thumbnail } : {}),
+        ...(file ? { file } : {}),
+        ...(thumbnail ? { thumbnail } : {}),
       },
     });
 

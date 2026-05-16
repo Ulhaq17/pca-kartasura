@@ -43,9 +43,7 @@ export class KegiatanService {
     const { skip, take } = getPaginationParams(query);
     const where = {
       deletedAt: null,
-      ...(query.programKerjaId
-        ? { programKerjaId: query.programKerjaId }
-        : {}),
+      ...(query.programKerjaId ? { programKerjaId: query.programKerjaId } : {}),
     };
 
     const [items, totalItems] = await this.prisma.$transaction([
@@ -166,7 +164,9 @@ export class KegiatanService {
     });
 
     if (!activeProgramKerja) {
-      throw new NotFoundException(`Program kerja dengan ID ${id} tidak ditemukan`);
+      throw new NotFoundException(
+        `Program kerja dengan ID ${id} tidak ditemukan`,
+      );
     }
   }
 

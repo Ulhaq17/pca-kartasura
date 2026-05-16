@@ -20,8 +20,15 @@ describe('App (e2e)', () => {
     uploadFile: jest
       .fn()
       .mockResolvedValue('http://localhost:9000/pca-bucket/test-photo.jpg'),
+    uploadBuffer: jest
+      .fn()
+      .mockResolvedValue('http://localhost:9000/pca-bucket/test-thumbnail.jpg'),
     deleteFile: jest.fn().mockResolvedValue(undefined),
   };
+
+  const testImageBuffer = Buffer.from(
+    '<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64"><rect width="64" height="64" fill="#2563eb"/></svg>',
+  );
 
   const expectPaginationMeta = (body: any) => {
     expect(body.meta.pagination).toEqual({
@@ -86,7 +93,9 @@ describe('App (e2e)', () => {
 
   describe('Health Check', () => {
     it('/api/v1/health/live (GET)', () => {
-      return request(app.getHttpServer()).get('/api/v1/health/live').expect(200);
+      return request(app.getHttpServer())
+        .get('/api/v1/health/live')
+        .expect(200);
     });
 
     it('/api/v1/health/ready (GET)', () => {
@@ -109,11 +118,7 @@ describe('App (e2e)', () => {
         .field('bioKetua', 'Aktif dalam dakwah dan pembinaan jamaah.')
         .field('videoProfil', 'https://www.youtube.com/watch?v=dQw4w9WgXcQ')
         .attach('fotoKetua', Buffer.from('fake-chairperson-image'), 'ketua.jpg')
-        .attach(
-          'sampulMajelis',
-          Buffer.from('fake-cover-image'),
-          'sampul.jpg',
-        )
+        .attach('sampulMajelis', Buffer.from('fake-cover-image'), 'sampul.jpg')
         .expect(201);
 
       expect(response.body.data).toHaveProperty('id');
@@ -569,23 +574,20 @@ describe('App (e2e)', () => {
     it('POST /api/v1/pengumuman (Create)', async () => {
       const response = await request(app.getHttpServer())
         .post('/api/v1/pengumuman')
-        .send({
-          judul: 'Pendaftaran Kajian Ramadhan',
-          tanggal: '2026-05-20T08:00:00.000Z',
-          file: 'http://localhost:9000/pca-bucket/pengumuman.pdf',
-          thumbnail: 'http://localhost:9000/pca-bucket/pengumuman.jpg',
+        .field('judul', 'Pendaftaran Kajian Ramadhan')
+        .field('tanggal', '2026-05-20T08:00:00.000Z')
+        .attach('file', testImageBuffer, {
+          filename: 'pengumuman.svg',
+          contentType: 'image/svg+xml',
         })
         .expect(201);
 
       expect(response.body.data).toHaveProperty('id');
       expect(response.body.data.judul).toBe('Pendaftaran Kajian Ramadhan');
       expect(response.body.data.tanggal).toBe('2026-05-20T08:00:00.000Z');
-      expect(response.body.data.file).toBe(
-        'http://localhost:9000/pca-bucket/pengumuman.pdf',
-      );
-      expect(response.body.data.thumbnail).toBe(
-        'http://localhost:9000/pca-bucket/pengumuman.jpg',
-      );
+      expect(response.body.data.file).toContain('test-photo.jpg');
+      expect(response.body.data.thumbnail).toContain('test-thumbnail.jpg');
+      expect(mockStorageService.uploadBuffer).toHaveBeenCalled();
 
       createdId = response.body.data.id;
     });
@@ -612,9 +614,10 @@ describe('App (e2e)', () => {
     it('PATCH /api/v1/pengumuman/:id (Update)', async () => {
       const response = await request(app.getHttpServer())
         .patch(`/api/v1/pengumuman/${createdId}`)
-        .send({
-          judul: 'Pendaftaran Kajian Ramadhan Diperpanjang',
-          thumbnail: 'http://localhost:9000/pca-bucket/pengumuman-baru.jpg',
+        .field('judul', 'Pendaftaran Kajian Ramadhan Diperpanjang')
+        .attach('file', testImageBuffer, {
+          filename: 'pengumuman-baru.svg',
+          contentType: 'image/svg+xml',
         })
         .expect(200);
 
@@ -623,7 +626,13 @@ describe('App (e2e)', () => {
         'Pendaftaran Kajian Ramadhan Diperpanjang',
       );
       expect(response.body.data.thumbnail).toBe(
-        'http://localhost:9000/pca-bucket/pengumuman-baru.jpg',
+        'http://localhost:9000/pca-bucket/test-thumbnail.jpg',
+      );
+      expect(mockStorageService.deleteFile).toHaveBeenCalledWith(
+        'http://localhost:9000/pca-bucket/test-photo.jpg',
+      );
+      expect(mockStorageService.deleteFile).toHaveBeenCalledWith(
+        'http://localhost:9000/pca-bucket/test-thumbnail.jpg',
       );
     });
 
@@ -734,7 +743,11 @@ describe('App (e2e)', () => {
         .patch(`/api/v1/program-kerja/${createdId}`)
         .field('judul', 'Literasi Keluarga Berkemajuan')
         .field('deskripsi', 'Deskripsi program yang sudah diperbarui.')
-        .attach('foto', Buffer.from('fake-updated-program-image'), 'program-baru.jpg')
+        .attach(
+          'foto',
+          Buffer.from('fake-updated-program-image'),
+          'program-baru.jpg',
+        )
         .expect(200);
 
       expect(response.body.data.id).toBe(createdId);
@@ -809,7 +822,11 @@ describe('App (e2e)', () => {
         .field('judul', 'Posyandu Berkemajuan')
         .field('majelisLembagaId', String(majelis.body.data.id))
         .field('deskripsi', 'Program layanan kesehatan keluarga.')
-        .attach('foto', Buffer.from('fake-health-program-image'), 'posyandu.jpg')
+        .attach(
+          'foto',
+          Buffer.from('fake-health-program-image'),
+          'posyandu.jpg',
+        )
         .expect(201);
 
       programKerjaId = program.body.data.id;
@@ -829,8 +846,12 @@ describe('App (e2e)', () => {
         .expect(201);
 
       expect(response.body.data).toHaveProperty('id');
-      expect(response.body.data.slug).toBe('pemeriksaan-kesehatan-ibu-dan-anak');
-      expect(response.body.data.judul).toBe('Pemeriksaan Kesehatan Ibu dan Anak');
+      expect(response.body.data.slug).toBe(
+        'pemeriksaan-kesehatan-ibu-dan-anak',
+      );
+      expect(response.body.data.judul).toBe(
+        'Pemeriksaan Kesehatan Ibu dan Anak',
+      );
       expect(response.body.data.foto).toHaveLength(4);
       expect(response.body.data.programKerja.id).toBe(programKerjaId);
 
@@ -888,7 +909,11 @@ describe('App (e2e)', () => {
         .field('judul', 'Pemeriksaan Kesehatan Rutin')
         .field('deskripsi', 'Kegiatan kesehatan yang sudah diperbarui.')
         .field('programKerjaId', String(programKerjaId))
-        .attach('foto', Buffer.from('fake-updated-activity-image'), 'kegiatan-baru.jpg')
+        .attach(
+          'foto',
+          Buffer.from('fake-updated-activity-image'),
+          'kegiatan-baru.jpg',
+        )
         .expect(200);
 
       expect(response.body.data.id).toBe(createdId);
@@ -1018,7 +1043,11 @@ describe('App (e2e)', () => {
         .patch(`/api/v1/artikel-kegiatan/${createdId}`)
         .field('judul', 'Bakti Sosial Ramadhan Berkemajuan')
         .field('deskripsi', 'Artikel kegiatan yang sudah diperbarui.')
-        .attach('sampul', Buffer.from('fake-updated-article-cover'), 'artikel-baru.jpg')
+        .attach(
+          'sampul',
+          Buffer.from('fake-updated-article-cover'),
+          'artikel-baru.jpg',
+        )
         .expect(200);
 
       expect(response.body.data.id).toBe(createdId);
@@ -1133,7 +1162,11 @@ describe('App (e2e)', () => {
         .patch(`/api/v1/artikel-kajian/${createdId}`)
         .field('judul', 'Kajian Tafsir Surat Al-Fatihah Berkemajuan')
         .field('deskripsi', 'Artikel kajian yang sudah diperbarui.')
-        .attach('sampul', Buffer.from('fake-updated-kajian-cover'), 'kajian-baru.jpg')
+        .attach(
+          'sampul',
+          Buffer.from('fake-updated-kajian-cover'),
+          'kajian-baru.jpg',
+        )
         .expect(200);
 
       expect(response.body.data.id).toBe(createdId);
@@ -1410,7 +1443,11 @@ describe('App (e2e)', () => {
     it('PATCH /api/v1/profil-struktur-organisasi/:id (Update)', async () => {
       const response = await request(app.getHttpServer())
         .patch(`/api/v1/profil-struktur-organisasi/${createdId}`)
-        .attach('foto', Buffer.from('fake-updated-structure-image'), 'struktur-baru.jpg')
+        .attach(
+          'foto',
+          Buffer.from('fake-updated-structure-image'),
+          'struktur-baru.jpg',
+        )
         .expect(200);
 
       expect(response.body.data.id).toBe(createdId);

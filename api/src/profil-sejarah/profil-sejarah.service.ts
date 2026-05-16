@@ -22,7 +22,7 @@ export class ProfilSejarahService {
     const data = await this.prisma.profilSejarah.create({
       data: dto,
     });
-    
+
     await this.auditService.logChange(this.entityName, data.id, 'CREATE', data);
     return data;
   }
@@ -47,26 +47,28 @@ export class ProfilSejarahService {
     const data = await this.prisma.profilSejarah.findFirst({
       where: { id, deletedAt: null },
     });
-    
+
     if (!data) {
-      throw new NotFoundException(`Profil/Sejarah dengan ID ${id} tidak ditemukan`);
+      throw new NotFoundException(
+        `Profil/Sejarah dengan ID ${id} tidak ditemukan`,
+      );
     }
     return data;
   }
 
   async update(id: number, dto: UpdateProfilSejarahDto) {
     const existing = await this.findOne(id);
-    
+
     const data = await this.prisma.profilSejarah.update({
       where: { id },
       data: dto,
     });
-    
+
     await this.auditService.logChange(this.entityName, id, 'UPDATE', {
       before: existing,
       after: data,
     });
-    
+
     return data;
   }
 

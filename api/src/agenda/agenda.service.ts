@@ -90,9 +90,7 @@ export class AgendaService {
     });
 
     if (!data) {
-      throw new NotFoundException(
-        `Agenda dengan slug ${slug} tidak ditemukan`,
-      );
+      throw new NotFoundException(`Agenda dengan slug ${slug} tidak ditemukan`);
     }
 
     return data;

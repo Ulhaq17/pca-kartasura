@@ -47,7 +47,9 @@ export function createPaginatedResult<T>(
   };
 }
 
-export function isPaginatedResult<T>(data: unknown): data is PaginatedResult<T> {
+export function isPaginatedResult<T>(
+  data: unknown,
+): data is PaginatedResult<T> {
   return (
     typeof data === 'object' &&
     data !== null &&
